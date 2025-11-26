@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Главная{% endblock %}
+
+{% block content %}
+<h1>Добро пожаловать, {{ current_user.username }}</h1>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>Всего тестов пройдено</h3>
+        <div class="value">{{ tests|length }}</div>
+    </div>
+    <div class="stat-card">
+        <h3>Тренировок выполнено</h3>
+        <div class="value">{{ pe_results|length }}</div>
+    </div>
+    <div class="stat-card">
+        <h3>Средняя оценка</h3>
+        <div class="value">
+            {% set scores = tests|selectattr('score', 'number')|map(attribute='score')|list %}
+            {% if scores %}
+                {{ (scores|sum / scores|length)|round|int }}%
+            {% else %}
+                -
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Последние тесты</h2>
+    {% if tests %}
+        {% for test in tests %}
+        <div class="list-item">
+            <h4>{{ test.subject }} - {{ test.topic }}</h4>
+            <div class="meta">
+                Оценка: {{ test.score if test.score else 'Не завершен' }}% | 
+                {{ test.created_at.strftime('%d.%m.%Y %H:%M') }}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color: var(--text-light);">Тестов пока нет. Начните с создания нового теста.</p>
+    {% endif %}
+</div>
+
+<div class="card" style="margin-top: 1.5rem;">
+    <h2>Результаты тренировок</h2>
+    {% if pe_results %}
+        {% for pe in pe_results %}
+        <div class="list-item">
+            <h4>{{ pe.exercise_type }}</h4>
+            <div class="meta">
+                Повторений: {{ pe.repetitions }} | 
+                Оценка: {{ pe.score }}% | 
+                {{ pe.created_at.strftime('%d.%m.%Y %H:%M') }}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color: var(--text-light);">Тренировок пока нет.</p>
+    {% endif %}
+</div>
+{% endblock %}
