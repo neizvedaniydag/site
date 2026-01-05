@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+
+{% block title %}Рецепты{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-4"><i class="bi bi-journal-text"></i> Рецепты здорового питания</h1>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRecipeModal">
+                <i class="bi bi-plus-lg"></i> Добавить рецепт
+            </button>
+        </div>
+    </div>
+
+    <!-- ========== ГЕНЕРАТОР РЕЦЕПТОВ ЧЕРЕЗ ИИ (НОВОЕ) ========== -->
+    <div class="card mb-4 shadow-sm bg-light">
+        <div class="card-header bg-success text-white">
+            <h4 class="mb-0"><i class="bi bi-robot"></i> Генератор рецептов (ИИ)</h4>
+        </div>
+        <div class="card-body">
+            <form id="aiRecipeForm" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Тип блюда</label>
+                    <select class="form-select" name="dish_type">
+                        <option value="">Любое</option>
+                        <option value="завтрак">Завтрак</option>
+                        <option value="обед">Обед</option>
+                        <option value="ужин">Ужин</option>
+                        <option value="десерт">Десерт</option>
+                        <option value="перекус">Перекус</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Кухня</label>
+                    <input type="text" class="form-control" name="cuisine" placeholder="итальянская, азиатская...">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Диета</label>
+                    <input type="text" class="form-control" name="dietary" placeholder="вегетарианское, веганское...">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Макс. калорий</label>
+                    <input type="number" class="form-control" name="max_calories" placeholder="500">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Дополнительные пожелания</label>
+                    <input type="text" class="form-control" name="notes" placeholder="без орехов, острое, с курицей...">
+                </div>
+                <div class="col-12">
+                    <button type="submit" id="generateRecipeBtn" class="btn btn-success">
+    <i class="bi bi-magic"></i> Сгенерировать рецепт
+</button>
+
+                    <span id="aiRecipeStatus" class="ms-3 text-muted"></span>
+                </div>
+            </form>
+
+            <!-- Результат генерации -->
+            <div id="generatedRecipeResult" class="mt-4"></div>
+        </div>
+    </div>
+    <!-- ========== КОНЕЦ ГЕНЕРАТОРА ========== -->
+
+    <div class="row">
+        {% for recipe in recipes %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                {% if recipe.image_url %}
+                <img src="{{ recipe.image_url }}" class="card-img-top" alt="{{ recipe.title }}">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ recipe.title }}</h5>
+                    <div class="nutrition-info mb-3">
+                        <small class="text-muted">
+                            <i class="bi bi-fire"></i> {{ recipe.calories }} ккал
+                            <span class="mx-2">|</span>
+                            <i class="bi bi-egg"></i> Б: {{ recipe.proteins }}г
+                            <span class="mx-2">|</span>
+                            <i class="bi bi-droplet"></i> Ж: {{ recipe.fats }}г
+                            <span class="mx-2">|</span>
+                            <i class="bi bi-grid"></i> У: {{ recipe.carbs }}г
+                        </small>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm" onclick="viewRecipe({{ recipe.id }})">
+                        <i class="bi bi-eye"></i> Подробнее
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Модальное окно добавления рецепта -->
+<div class="modal fade" id="addRecipeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить новый рецепт</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addRecipeForm">
+                    <div class="mb-3">
+                        <label class="form-label">Название рецепта</label>
+                        <input type="text" class="form-control" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ингредиенты</label>
+                        <textarea class="form-control" name="ingredients" rows="4" required></textarea>
+                        <small class="text-muted">Каждый ингредиент с новой строки</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Инструкция приготовления</label>
+                        <textarea class="form-control" name="instructions" rows="4" required></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Калории</label>
+                            <input type="number" class="form-control" name="calories" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Белки (г)</label>
+                            <input type="number" class="form-control" name="proteins" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Жиры (г)</label>
+                            <input type="number" class="form-control" name="fats" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Углеводы (г)</label>
+                            <input type="number" class="form-control" name="carbs" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">URL изображения</label>
+                        <input type="url" class="form-control" name="image_url">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Добавить рецепт</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно просмотра рецепта -->
+<div class="modal fade" id="viewRecipeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="recipeTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="recipeContent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ========== ОРИГИНАЛЬНЫЕ ФУНКЦИИ ==========
+async function viewRecipe(recipeId) {
+    try {
+        const response = await fetch(`/nutrition/recipes/${recipeId}`);
+        const recipe = await response.json();
+        
+        document.getElementById('recipeTitle').textContent = recipe.title;
+        
+        let content = `
+            <div class="nutrition-info mb-4">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <h5><i class="bi bi-fire"></i> Калории</h5>
+                        <p>${recipe.calories} ккал</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h5><i class="bi bi-egg"></i> Белки</h5>
+                        <p>${recipe.proteins}г</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h5><i class="bi bi-droplet"></i> Жиры</h5>
+                        <p>${recipe.fats}г</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h5><i class="bi bi-grid"></i> Углеводы</h5>
+                        <p>${recipe.carbs}г</p>
+                    </div>
+                </div>
+            </div>
+            <h4>Ингредиенты:</h4>
+            <ul>
+                ${recipe.ingredients.map(i => `<li>${i}</li>`).join('')}
+            </ul>
+            <h4>Инструкция приготовления:</h4>
+            <p>${recipe.instructions}</p>
+        `;
+        
+        document.getElementById('recipeContent').innerHTML = content;
+        new bootstrap.Modal(document.getElementById('viewRecipeModal')).show();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+document.getElementById('addRecipeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = {
+        title: formData.get('title'),
+        ingredients: formData.get('ingredients').split('\n').filter(Boolean),
+        instructions: formData.get('instructions'),
+        calories: parseFloat(formData.get('calories')),
+        proteins: parseFloat(formData.get('proteins')),
+        fats: parseFloat(formData.get('fats')),
+        carbs: parseFloat(formData.get('carbs')),
+        image_url: formData.get('image_url')
+    };
+    
+    try {
+        const response = await fetch('/nutrition/recipes/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            location.reload();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+});
+
+// ========== НОВАЯ ФУНКЦИЯ: ГЕНЕРАЦИЯ РЕЦЕПТА ЧЕРЕЗ ИИ ==========
+document.getElementById('aiRecipeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    const payload = {
+        dish_type: formData.get('dish_type') || '',
+        cuisine: formData.get('cuisine') || '',
+        dietary: formData.get('dietary') || '',
+        max_calories: formData.get('max_calories') || '',
+        notes: formData.get('notes') || ''
+    };
+
+    const status = document.getElementById('aiRecipeStatus');
+    const btn = document.getElementById('generateRecipeBtn');
+    const resultDiv = document.getElementById('generatedRecipeResult');
+
+    status.textContent = 'Генерация рецепта...';
+    btn.disabled = true;
+    resultDiv.innerHTML = '';
+
+    try {
+        const res = await fetch('/api/generate-recipe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        const result = await res.json();
+        
+        if (!result.success) {
+            status.textContent = 'Ошибка: ' + (result.error || 'неизвестная');
+            btn.disabled = false;
+            return;
+        }
+
+        status.textContent = '✅ Рецепт готов!';
+        
+        const recipe = result.recipe;
+        
+        // Отображаем рецепт
+        const card = document.createElement('div');
+        card.className = 'card border-success';
+        card.innerHTML = `
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">${recipe.title}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3 text-center">
+                        <small class="text-muted">Калории</small>
+                        <h6>${recipe.calories} ккал</h6>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <small class="text-muted">Белки</small>
+                        <h6>${recipe.proteins}г</h6>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <small class="text-muted">Жиры</small>
+                        <h6>${recipe.fats}г</h6>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <small class="text-muted">Углеводы</small>
+                        <h6>${recipe.carbs}г</h6>
+                    </div>
+                </div>
+                <h6>Ингредиенты:</h6>
+                <ul>
+                    ${recipe.ingredients.map(i => `<li>${i}</li>`).join('')}
+                </ul>
+                <h6>Приготовление:</h6>
+                <p>${recipe.instructions}</p>
+                <button class="btn btn-primary" onclick="saveGeneratedRecipe(${JSON.stringify(recipe).replace(/"/g, '&quot;')})">
+                    <i class="bi bi-save"></i> Сохранить в базу рецептов
+                </button>
+            </div>
+        `;
+        
+        resultDiv.appendChild(card);
+        
+    } catch (err) {
+        console.error(err);
+        status.textContent = '❌ Ошибка: ' + err.message;
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+// Сохранение сгенерированного рецепта
+async function saveGeneratedRecipe(recipe) {
+    try {
+        const response = await fetch('/nutrition/recipes/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(recipe)
+        });
+        
+        if (response.ok) {
+            alert('✅ Рецепт сохранён!');
+            location.reload();
+        } else {
+            alert('❌ Ошибка сохранения');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Ошибка сохранения');
+    }
+}
+</script>
+{% endblock %}
