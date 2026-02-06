@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Панель управления учителя{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .profile-header {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        margin: 0 auto 1rem;
+        border: 4px solid white;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #f5576c;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .action-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .action-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-align: center;
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+    
+    .action-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        text-decoration: none;
+        color: inherit;
+    }
+    
+    .action-card i {
+        font-size: 3rem;
+        color: #f5576c;
+        margin-bottom: 1rem;
+    }
+    
+    .action-card h3 {
+        margin: 0;
+        color: #333;
+    }
+    
+    .recent-results {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .result-item {
+        padding: 1rem;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .result-item:last-child {
+        border-bottom: none;
+    }
+    
+    .badge-custom {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .badge-teacher {
+        background: #f5576c;
+        color: white;
+    }
+    
+    .badge-success {
+        background: #10b981;
+        color: white;
+    }
+    
+    .badge-primary {
+        background: #667eea;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- Заголовок профиля -->
+    <div class="profile-header">
+        <div class="profile-avatar">
+            <i class="bi bi-person-badge"></i>
+        </div>
+        <h1 style="text-align: center; margin: 0;">{{ current_user.nickname or current_user.username }}</h1>
+        <p style="text-align: center; margin: 0.5rem 0 0; opacity: 0.9;">@{{ current_user.nickname or current_user.username }}</p>
+        <p style="text-align: center; margin-top: 0.5rem;">
+            <span class="badge-custom badge-teacher">Учитель</span>
+        </p>
+    </div>
+    
+    <!-- Статистика -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ students_count }}</div>
+            <div class="stat-label">Всего учеников</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ all_tests_count }}</div>
+            <div class="stat-label">Всего тестов пройдено</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ avg_score_all }}%</div>
+            <div class="stat-label">Средняя оценка всех учеников</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ all_pe_count }}</div>
+            <div class="stat-label">Тренировок выполнено</div>
+        </div>
+    </div>
+    
+    <!-- Действия -->
+    <div class="action-cards">
+        <a href="{{ url_for('teacher_students') }}" class="action-card">
+            <i class="bi bi-people"></i>
+            <h3>Управление учениками</h3>
+            <p style="color: #666; margin-top: 0.5rem;">Просмотр и контроль всех учеников</p>
+        </a>
+        
+        <a href="{{ url_for('teacher_students') }}" class="action-card">
+            <i class="bi bi-clipboard-data"></i>
+            <h3>Результаты учеников</h3>
+            <p style="color: #666; margin-top: 0.5rem;">Просмотр результатов тестов и тренировок</p>
+        </a>
+        
+        <a href="{{ url_for('dashboard') }}" class="action-card">
+            <i class="bi bi-bar-chart"></i>
+            <h3>Аналитика</h3>
+            <p style="color: #666; margin-top: 0.5rem;">Статистика и отчеты</p>
+        </a>
+    </div>
+    
+    <!-- Последние результаты учеников -->
+    <div class="recent-results">
+        <h3 style="margin-top: 0;"><i class="bi bi-clock-history"></i> Последние результаты учеников</h3>
+        {% if recent_student_tests %}
+            {% for test in recent_student_tests %}
+            <div class="result-item">
+                <div>
+                    <strong>{{ test.user.username }}</strong> ({{ test.user.nickname or test.user.username }})<br>
+                    <small style="color: #666;">{{ test.subject }} - {{ test.topic }}</small>
+                </div>
+                <div style="text-align: right;">
+                    {% if test.score %}
+                        <span class="badge-custom badge-primary">{{ test.score }}%</span>
+                    {% else %}
+                        <span style="color: #999;">Не завершен</span>
+                    {% endif %}
+                    <br>
+                    <small style="color: #999;">{{ test.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color: #999; text-align: center; padding: 2rem;">Пока нет результатов учеников</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
