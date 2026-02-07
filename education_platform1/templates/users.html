@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Пользователи{% endblock %}
+
+{% block extra_css %}
+<style>
+    .users-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .users-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    
+    .user-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .user-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    
+    .user-role {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+    }
+    
+    .role-teacher {
+        background: #f5576c;
+        color: white;
+    }
+    
+    .role-student {
+        background: #3b82f6;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="users-container">
+    <h1><i class="bi bi-people"></i> Пользователи</h1>
+    
+    <form method="GET" action="{{ url_for('users_list') }}" class="mt-3">
+        <div class="input-group">
+            <input type="text" class="form-control" name="q" placeholder="Поиск по имени, никнейму или email"
+                   value="{{ query }}">
+            <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Найти</button>
+        </div>
+    </form>
+    
+    <div class="users-grid">
+        {% for user in users %}
+        <div class="user-card">
+            <h5 style="margin-bottom: 0.25rem;">{{ user.nickname or user.username }}</h5>
+            <p style="margin: 0; color: #666;">@{{ user.nickname or user.username }}</p>
+            <p style="margin: 0.5rem 0; color: #999; font-size: 0.9rem;">{{ user.email }}</p>
+            <span class="user-role {{ 'role-teacher' if user.is_teacher() else 'role-student' }}">
+                {{ 'Учитель' if user.is_teacher() else 'Ученик' }}
+            </span>
+            <a href="{{ url_for('view_user', user_id=user.id) }}" class="btn btn-outline-primary mt-3" style="width: 100%;">
+                <i class="bi bi-person"></i> Смотреть профиль
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if users|length == 0 %}
+    <div style="text-align: center; padding: 3rem; color: #999;">
+        <i class="bi bi-search" style="font-size: 3rem; display: block; margin-bottom: 1rem;"></i>
+        <p>Пользователей не найдено</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+{
+  "cells": [],
+  "metadata": {
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 2
+}

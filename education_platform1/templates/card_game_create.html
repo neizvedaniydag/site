@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Создать игру в карточки{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/card_game.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-plus"></i> Создать новую игру в карточки</h4>
+                </div>
+                <div class="card-body">
+                    <form id="createGameForm">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Название игры <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="title" name="title" required 
+                                   placeholder="Например: Изучаем историю России">
+                            <small class="text-muted">Описательное название для вашей игры</small>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="subject" class="form-label">Предмет <span class="text-danger">*</span></label>
+                                <select class="form-select" id="subject" name="subject" required onchange="updateTopics()">
+                                    <option value="">Выберите предмет...</option>
+                                    {% for subject in subjects_topics %}
+                                    <option value="{{ subject }}">{{ subject }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="topic" class="form-label">Тема <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="topic" name="topic" required 
+                                       placeholder="Например: Великая Отечественная война">
+                                <small class="text-muted">Или выберите из списка</small>
+                                <select class="form-select mt-2" id="topicSelect" onchange="selectTopic()">
+                                    <option value="">Выберите тему...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="num_cards" class="form-label">Количество карточек</label>
+                            <input type="number" class="form-control" id="num_cards" name="num_cards"
+                                   value="10" min="5" max="50">
+                            <small class="text-muted">От 5 до 50 карточек</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="material_text" class="form-label">Загрузить учебный материал (опционально)</label>
+                            <textarea class="form-control" id="material_text" name="material_text" rows="6" 
+                                      placeholder="Вставьте текст материала, из которого будут создаваться карточки..."></textarea>
+                            <small class="text-muted">Материал будет использован при генерации карточек через ИИ</small>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-lightbulb"></i> <strong>Совет:</strong> Загрузите учебный материал, чтобы карточки были созданы на основе конкретного контента.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-check"></i> Создать игру
+                            </button>
+                            <a href="{{ url_for('card_game') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Вернуться
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const subjectsTopics = {
+    {% for subject, topics in subjects_topics.items() %}
+    "{{ subject }}": {{ topics|tojson }},
+    {% endfor %}
+};
+
+function updateTopics() {
+    const subject = document.getElementById('subject').value;
+    const topicSelect = document.getElementById('topicSelect');
+    topicSelect.innerHTML = '<option value="">Выберите тему...</option>';
+    
+    if (subject && subjectsTopics[subject]) {
+        subjectsTopics[subject].forEach(topic => {
+            const option = document.createElement('option');
+            option.value = topic;
+            option.textContent = topic;
+            topicSelect.appendChild(option);
+        });
+    }
+}
+
+function selectTopic() {
+    const topic = document.getElementById('topicSelect').value;
+    if (topic) {
+        document.getElementById('topic').value = topic;
+    }
+}
+
+document.getElementById('createGameForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const data = {
+        title: document.getElementById('title').value.trim(),
+        subject: document.getElementById('subject').value,
+        topic: document.getElementById('topic').value.trim(),
+        num_cards: parseInt(document.getElementById('num_cards').value),
+        material_text: document.getElementById('material_text').value.trim()
+    };
+    
+    if (!data.title || !data.subject || !data.topic) {
+        alert('Заполните все обязательные поля!');
+        return;
+    }
+    
+    if (data.num_cards < 5 || data.num_cards > 50) {
+        alert('Количество карточек должно быть от 5 до 50!');
+        return;
+    }
+    
+    const btn = this.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Создание...';
+    
+    fetch('/card-game/create', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(response => {
+        if (response.success) {
+            // ⭐⭐⭐ КРИТИЧЕСКИ ВАЖНО: Редирект на страницу УПРАВЛЕНИЯ, НЕ на /play!
+            const sessionUrl = `/card-game/session/${response.session_id}`;
+            console.log('Редирект на:', sessionUrl);
+            window.location.href = sessionUrl;
+        } else {
+            alert('Ошибка: ' + response.error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> Создать игру';
+        }
+    })
+    .catch(err => {
+        console.error('Ошибка создания игры:', err);
+        alert('Ошибка: ' + err);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Создать игру';
+    });
+});
+</script>
+
+{% endblock %}
