@@ -1,0 +1,929 @@
+{% extends "base.html" %}
+{% block title %}Мессенджер{% endblock %}
+
+{% block extra_css %}
+<style>
+    .messenger-container {
+        display: flex;
+        height: calc(100vh - 200px);
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .conversations-list {
+        width: 300px;
+        border-right: 1px solid #e0e0e0;
+        overflow-y: auto;
+        background: #f8f9fa;
+    }
+    
+    .conversations-header {
+        padding: 1rem;
+        background: #3498db;
+        color: white;
+        font-weight: bold;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .conversation-item {
+        padding: 1rem;
+        border-bottom: 1px solid #e0e0e0;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .conversation-item:hover {
+        background: #e9ecef;
+    }
+    
+    .conversation-item.active {
+        background: #d0e8ff;
+        border-left: 4px solid #3498db;
+    }
+    
+    .conversation-info {
+        flex: 1;
+    }
+    
+    .conversation-username {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 0.25rem;
+    }
+    
+    .conversation-preview {
+        font-size: 0.9rem;
+        color: #666;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .conversation-time {
+        font-size: 0.75rem;
+        color: #999;
+        margin-top: 0.25rem;
+    }
+    
+    .unread-badge {
+        background: #e74c3c;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: bold;
+        margin-left: 0.5rem;
+    }
+    
+    .chat-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chat-header {
+        padding: 1rem;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e0e0e0;
+        font-weight: bold;
+        color: #333;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        background: #ffffff;
+    }
+    
+    .message {
+        margin-bottom: 1rem;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .message.sent {
+        align-items: flex-end;
+    }
+    
+    .message.received {
+        align-items: flex-start;
+    }
+    
+    .message-bubble {
+        max-width: 70%;
+        padding: 0.75rem 1rem;
+        border-radius: 18px;
+        word-wrap: break-word;
+    }
+    
+    .message.sent .message-bubble {
+        background: #3498db;
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+    
+    .message.received .message-bubble {
+        background: #e9ecef;
+        color: #333;
+        border-bottom-left-radius: 4px;
+    }
+    
+    .message-time {
+        font-size: 0.75rem;
+        color: #999;
+        margin-top: 0.25rem;
+        padding: 0 0.5rem;
+    }
+    
+    .chat-input-area {
+        padding: 1rem;
+        border-top: 1px solid #e0e0e0;
+        background: #f8f9fa;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .chat-input {
+        flex: 1;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        outline: none;
+    }
+    
+    .chat-input:focus {
+        border-color: #3498db;
+    }
+    
+    .send-btn {
+        padding: 0.75rem 1.5rem;
+        background: #3498db;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .send-btn:hover {
+        background: #2980b9;
+    }
+    
+    .send-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+    
+    .empty-chat {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #999;
+        font-size: 1.1rem;
+    }
+    
+    .no-conversations {
+        padding: 2rem;
+        text-align: center;
+        color: #999;
+    }
+    
+    #searchResults {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    #searchResults .conversation-item {
+        border-bottom: 1px solid #eee;
+    }
+    
+    #searchResults .conversation-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4"><i class="bi bi-chat-dots"></i> Мессенджер</h1>
+    
+    <div class="messenger-container">
+        <!-- Список диалогов -->
+        <div class="conversations-list">
+            <div class="conversations-header">
+                <i class="bi bi-people"></i> Диалоги
+            </div>
+            
+            <!-- Поиск пользователей -->
+            <div style="padding: 0.75rem; border-bottom: 1px solid #e0e0e0;">
+                <input type="text" id="userSearch" class="form-control" placeholder="Поиск по никнейму..." 
+                       style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                       onkeyup="searchUsers(this.value)">
+                <div id="searchResults" style="margin-top: 0.5rem; max-height: 200px; overflow-y: auto; display: none;"></div>
+            </div>
+            
+            {% if conversations %}
+                {% for conv in conversations %}
+                <div class="conversation-item" data-user-id="{{ conv.user.id }}" data-username="{{ conv.user.username }}" onclick="loadConversation({{ conv.user.id }}, this.dataset.username)">
+                    <div class="conversation-info">
+                        <div class="conversation-username">{{ conv.user.nickname or conv.user.username }} (@{{ conv.user.nickname or conv.user.username }})</div>
+                        {% if conv.last_message %}
+                            <div class="conversation-preview">
+                                {% if conv.last_message.sender_id == current_user.id %}
+                                    <strong>Вы:</strong> 
+                                {% endif %}
+                                {{ conv.last_message.content[:50] }}{% if conv.last_message.content|length > 50 %}...{% endif %}
+                            </div>
+                            <div class="conversation-time">
+                                {{ conv.last_message.created_at.strftime('%d.%m.%Y %H:%M') }}
+                            </div>
+                        {% else %}
+                            <div class="conversation-preview" style="color: #999;">Нет сообщений</div>
+                        {% endif %}
+                    </div>
+                    {% if conv.unread_count > 0 %}
+                        <span class="unread-badge">{{ conv.unread_count }}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-conversations">
+                    <p>Нет диалогов</p>
+                    <p style="font-size: 0.9rem;">Начните новый диалог, выбрав пользователя</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Область чата -->
+        <div class="chat-area">
+            <div class="chat-header" id="chatHeader">
+                <span id="chatUserName">Выберите диалог</span>
+                <div style="margin-left: auto;">
+                    <button class="btn btn-sm btn-primary" id="callBtn" onclick="startAudioCall()" style="display: none;">
+                        <i class="bi bi-telephone-fill"></i> Звонок
+                    </button>
+                </div>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="empty-chat">
+                    Выберите диалог для начала общения
+                </div>
+            </div>
+            
+            <div class="chat-input-area" id="chatInputArea" style="display: none;">
+                <input type="text" class="chat-input" id="messageInput" placeholder="Введите сообщение..." onkeypress="handleKeyPress(event)">
+                <button class="send-btn" onclick="sendMessage()" id="sendBtn">
+                    <i class="bi bi-send"></i> Отправить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CURRENT_USER_ID = {{ current_user.id }};
+let currentUserId = null;
+let currentUserName = null;
+let messageInterval = null;
+
+function loadConversation(userId, userName) {
+    currentUserId = userId;
+    currentUserName = userName;
+    
+    // Обновляем активный элемент
+    document.querySelectorAll('.conversation-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    const existingItem = document.querySelector(`[data-user-id="${userId}"]`);
+    if (existingItem) {
+        existingItem.classList.add('active');
+    }
+    
+    // Обновляем заголовок
+    const chatHeader = document.getElementById('chatHeader');
+    chatHeader.innerHTML = `
+        <span><i class="bi bi-person-circle"></i> ${userName}</span>
+        <div style="margin-left: auto;">
+            <button class="btn btn-sm btn-primary" id="callBtn" onclick="startAudioCall()">
+                <i class="bi bi-telephone-fill"></i> Звонок
+            </button>
+        </div>
+    `;
+    
+    // Показываем область ввода
+    document.getElementById('chatInputArea').style.display = 'flex';
+    
+    // Загружаем сообщения
+    fetch(`/api/messenger/conversation/${userId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayMessages(data.messages);
+                // Обновляем список диалогов (убираем badge непрочитанных)
+                updateConversationList();
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки сообщений:', error);
+        });
+    
+    // Запускаем автообновление каждые 3 секунды
+    if (messageInterval) {
+        clearInterval(messageInterval);
+    }
+    messageInterval = setInterval(() => {
+        if (currentUserId) {
+            fetch(`/api/messenger/conversation/${currentUserId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayMessages(data.messages);
+                    }
+                })
+                .catch(error => console.error('Ошибка автообновления:', error));
+        }
+    }, 3000);
+}
+
+function displayMessages(messages) {
+    const messagesContainer = document.getElementById('chatMessages');
+    
+    if (messages.length === 0) {
+        messagesContainer.innerHTML = '<div class="empty-chat">Нет сообщений. Начните диалог!</div>';
+        return;
+    }
+    
+    messagesContainer.innerHTML = '';
+    
+    messages.forEach(msg => {
+        const isSent = msg.sender_id === CURRENT_USER_ID;
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+        
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        bubble.textContent = msg.content;
+        
+        const time = document.createElement('div');
+        time.className = 'message-time';
+        const msgDate = new Date(msg.created_at);
+        time.textContent = msgDate.toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        messageDiv.appendChild(bubble);
+        messageDiv.appendChild(time);
+        messagesContainer.appendChild(messageDiv);
+    });
+    
+    // Прокрутка вниз
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const content = input.value.trim();
+    
+    if (!content || !currentUserId) {
+        return;
+    }
+    
+    const sendBtn = document.getElementById('sendBtn');
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Отправка...';
+    
+    fetch('/api/messenger/send', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            receiver_id: currentUserId,
+            content: content
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            input.value = '';
+            // Добавляем новое сообщение сразу в чат
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message sent';
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.textContent = content;
+            
+            const time = document.createElement('div');
+            time.className = 'message-time';
+            const now = new Date();
+            time.textContent = now.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            messageDiv.appendChild(bubble);
+            messageDiv.appendChild(time);
+            messagesContainer.appendChild(messageDiv);
+            
+            // Прокрутка вниз
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Обновляем список диалогов без перезагрузки страницы
+            updateConversationPreview(currentUserId, content);
+        } else {
+            alert('Ошибка отправки: ' + (data.error || 'Неизвестная ошибка'));
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка отправки:', error);
+        alert('Ошибка отправки сообщения');
+    })
+    .finally(() => {
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="bi bi-send"></i> Отправить';
+    });
+}
+
+function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+        sendMessage();
+    }
+}
+
+function updateConversationList() {
+    // Обновляем счетчик непрочитанных
+    fetch('/api/messenger/unread-count')
+        .then(response => response.json())
+        .then(data => {
+            // Можно обновить badge в навигации, если нужно
+        });
+}
+
+function updateConversationPreview(userId, lastMessage) {
+    // Обновляем или создаем превью последнего сообщения
+    let conversationItem = document.querySelector(`[data-user-id="${userId}"]`);
+    const conversationsList = document.querySelector('.conversations-list');
+
+    if (!conversationItem && conversationsList) {
+        const newItem = document.createElement('div');
+        newItem.className = 'conversation-item';
+        newItem.dataset.userId = userId;
+        newItem.dataset.username = currentUserName || 'Собеседник';
+        newItem.onclick = () => loadConversation(userId, currentUserName || 'Собеседник');
+        newItem.innerHTML = `
+            <div class="conversation-info">
+                <div class="conversation-username">${currentUserName || 'Собеседник'}</div>
+                <div class="conversation-preview" style="color: #666;">Новое сообщение</div>
+                <div class="conversation-time"></div>
+            </div>
+        `;
+        conversationsList.appendChild(newItem);
+        const placeholder = document.querySelector('.no-conversations');
+        if (placeholder) {
+            placeholder.remove();
+        }
+        conversationItem = newItem;
+    }
+
+    if (conversationItem) {
+        conversationItem.classList.add('active');
+        const preview = conversationItem.querySelector('.conversation-preview');
+        if (preview) {
+            preview.innerHTML = `<strong>Вы:</strong> ${lastMessage.length > 50 ? lastMessage.substring(0, 50) + '...' : lastMessage}`;
+        }
+        const timeElement = conversationItem.querySelector('.conversation-time');
+        if (timeElement) {
+            const now = new Date();
+            timeElement.textContent = now.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+    }
+}
+
+function searchUsers(query) {
+    const searchResults = document.getElementById('searchResults');
+    
+    if (query.length < 2) {
+        searchResults.style.display = 'none';
+        return;
+    }
+    
+    fetch(`/api/messenger/search-users?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.users.length > 0) {
+                searchResults.innerHTML = '';
+                data.users.forEach(user => {
+                    const userDiv = document.createElement('div');
+                    userDiv.className = 'conversation-item';
+                    userDiv.style.cursor = 'pointer';
+                    userDiv.innerHTML = `
+                        <div class="conversation-info">
+                            <div class="conversation-username">${user.nickname || user.username} (@${user.nickname || user.username})</div>
+                            <div class="conversation-preview" style="color: #666;">${user.email}</div>
+                        </div>
+                    `;
+                    userDiv.onclick = () => {
+                        loadConversation(user.id, user.nickname || user.username);
+                        searchResults.style.display = 'none';
+                        document.getElementById('userSearch').value = '';
+                    };
+                    searchResults.appendChild(userDiv);
+                });
+                searchResults.style.display = 'block';
+            } else {
+                searchResults.innerHTML = '<div style="padding: 0.5rem; color: #999;">Пользователи не найдены</div>';
+                searchResults.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка поиска:', error);
+        });
+}
+
+let localAudioStream = null;
+let remoteAudioStream = null;
+let peerConnection = null;
+let isCallActive = false;
+
+async function checkMicrophonePermission() {
+    try {
+        // Проверяем доступность API
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('Ваш браузер не поддерживает доступ к микрофону');
+        }
+        
+        // Проверяем разрешения (если поддерживается)
+        if (navigator.permissions) {
+            const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+            console.log('[INFO] Статус разрешения микрофона:', permissionStatus.state);
+            
+            if (permissionStatus.state === 'denied') {
+                throw new Error('Доступ к микрофону запрещен. Разрешите доступ в настройках браузера.');
+            }
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('[ERROR] Ошибка проверки разрешений:', error);
+        throw error;
+    }
+}
+
+async function requestMicrophoneAccess() {
+    try {
+        // Сначала проверяем разрешения
+        await checkMicrophonePermission();
+        
+        // Запрашиваем доступ к микрофону
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            }, 
+            video: false 
+        });
+        
+        return stream;
+    } catch (error) {
+        console.error('[ERROR] Ошибка доступа к микрофону:', error);
+        
+        let errorMessage = 'Не удалось получить доступ к микрофону.';
+        
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+            errorMessage = 'Доступ к микрофону запрещен. Пожалуйста, разрешите доступ к микрофону в настройках браузера и попробуйте снова.';
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+            errorMessage = 'Микрофон не найден. Убедитесь, что микрофон подключен к устройству.';
+        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+            errorMessage = 'Микрофон используется другим приложением. Закройте другие приложения, использующие микрофон.';
+        } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
+            errorMessage = 'Микрофон не поддерживает требуемые настройки.';
+        } else if (error.name === 'TypeError') {
+            errorMessage = 'Ваш браузер не поддерживает доступ к микрофону. Используйте современный браузер (Chrome, Firefox, Edge).';
+        }
+        
+        throw { message: errorMessage, originalError: error };
+    }
+}
+
+function startAudioCall() {
+    if (!currentUserId) {
+        alert('Выберите собеседника для звонка');
+        return;
+    }
+    
+    if (isCallActive) {
+        alert('Звонок уже активен');
+        return;
+    }
+    
+    // Создаем модальное окно для аудио звонка
+    const callModal = document.createElement('div');
+    callModal.id = 'audioCallModal';
+    callModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.9);
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    callModal.innerHTML = `
+        <div style="background: #fff; padding: 3rem; border-radius: 12px; max-width: 500px; width: 90%; text-align: center;">
+            <div style="width: 150px; height: 150px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0 auto 2rem; display: flex; align-items: center; justify-content: center; font-size: 4rem; color: white;">
+                <i class="bi bi-person-circle"></i>
+            </div>
+            <h3 style="margin-bottom: 0.5rem;">Звонок с ${currentUserName}</h3>
+            <p id="callStatus" style="color: #666; margin-bottom: 2rem;">
+                <i class="bi bi-hourglass-split"></i> Запрос доступа к микрофону...
+            </p>
+            <div id="permissionRequest" style="margin-bottom: 1rem;">
+                <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                    Для звонка необходим доступ к микрофону. Нажмите "Разрешить" в запросе браузера.
+                </p>
+                <button class="btn btn-primary" id="requestPermissionBtn" onclick="requestMicrophoneForCall()" style="padding: 0.75rem 1.5rem;">
+                    <i class="bi bi-mic"></i> Запросить доступ к микрофону
+                </button>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+                <button class="btn btn-success btn-lg" id="startCallBtn" onclick="initiateAudioCall()" style="padding: 1rem 2rem; display: none;">
+                    <i class="bi bi-telephone-fill"></i> Начать звонок
+                </button>
+                <button class="btn btn-danger btn-lg" onclick="endAudioCall()" style="padding: 1rem 2rem;">
+                    <i class="bi bi-x-circle"></i> Отменить
+                </button>
+            </div>
+            <div id="callControls" style="display: none; margin-top: 2rem;">
+                <button class="btn btn-warning" id="muteBtn" onclick="toggleMute()" style="margin-right: 1rem;">
+                    <i class="bi bi-mic"></i> <span id="muteText">Выключить микрофон</span>
+                </button>
+                <button class="btn btn-danger" onclick="endAudioCall()">
+                    <i class="bi bi-telephone-x"></i> Завершить звонок
+                </button>
+            </div>
+            <div id="errorMessage" style="display: none; margin-top: 1rem; padding: 1rem; background: #fee; border: 1px solid #fcc; border-radius: 4px; color: #c33;"></div>
+            <audio id="remoteAudio" autoplay style="display: none;"></audio>
+        </div>
+    `;
+    
+    document.body.appendChild(callModal);
+    
+    // Автоматически запрашиваем доступ к микрофону
+    requestMicrophoneForCall();
+}
+
+async function requestMicrophoneForCall() {
+    const statusEl = document.getElementById('callStatus');
+    const permissionRequest = document.getElementById('permissionRequest');
+    const requestBtn = document.getElementById('requestPermissionBtn');
+    const startCallBtn = document.getElementById('startCallBtn');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    // Скрываем предыдущие ошибки
+    errorMessage.style.display = 'none';
+    errorMessage.textContent = '';
+    
+    // Обновляем статус
+    statusEl.innerHTML = '<i class="bi bi-hourglass-split"></i> Запрос доступа к микрофону...';
+    requestBtn.disabled = true;
+    requestBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Запрос...';
+    
+    try {
+        // Запрашиваем доступ к микрофону
+        localAudioStream = await requestMicrophoneAccess();
+        
+        // Успешно получили доступ
+        statusEl.innerHTML = '<i class="bi bi-check-circle" style="color: #10b981;"></i> Микрофон подключен';
+        statusEl.style.color = '#10b981';
+        permissionRequest.style.display = 'none';
+        startCallBtn.style.display = 'inline-block';
+        
+        // Показываем индикатор активности микрофона
+        const audioTracks = localAudioStream.getAudioTracks();
+        if (audioTracks.length > 0) {
+            console.log('[OK] Микрофон подключен:', audioTracks[0].label);
+            console.log('[INFO] Настройки микрофона:', {
+                echoCancellation: audioTracks[0].getSettings().echoCancellation,
+                noiseSuppression: audioTracks[0].getSettings().noiseSuppression,
+                autoGainControl: audioTracks[0].getSettings().autoGainControl
+            });
+        }
+        
+    } catch (error) {
+        // Ошибка доступа
+        console.error('[ERROR] Ошибка доступа к микрофону:', error);
+        
+        statusEl.innerHTML = '<i class="bi bi-x-circle" style="color: #ef4444;"></i> Ошибка доступа к микрофону';
+        statusEl.style.color = '#ef4444';
+        
+        errorMessage.textContent = error.message || 'Не удалось получить доступ к микрофону';
+        errorMessage.style.display = 'block';
+        
+        requestBtn.disabled = false;
+        requestBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Попробовать снова';
+        startCallBtn.style.display = 'none';
+        
+        // Показываем инструкции для разных браузеров
+        const browserInstructions = getBrowserInstructions();
+        if (browserInstructions) {
+            errorMessage.innerHTML += '<br><br><strong>Как разрешить доступ:</strong><br>' + browserInstructions;
+        }
+    }
+}
+
+function getBrowserInstructions() {
+    const userAgent = navigator.userAgent.toLowerCase();
+    
+    if (userAgent.includes('chrome')) {
+        return 'Chrome: Нажмите на иконку замка в адресной строке → Разрешения → Микрофон → Разрешить';
+    } else if (userAgent.includes('firefox')) {
+        return 'Firefox: Нажмите на иконку замка в адресной строке → Разрешения → Микрофон → Разрешить';
+    } else if (userAgent.includes('edge')) {
+        return 'Edge: Нажмите на иконку замка в адресной строке → Разрешения → Микрофон → Разрешить';
+    } else if (userAgent.includes('safari')) {
+        return 'Safari: Safari → Настройки → Веб-сайты → Микрофон → Разрешить для этого сайта';
+    }
+    
+    return 'Откройте настройки браузера и разрешите доступ к микрофону для этого сайта';
+}
+
+function initiateAudioCall() {
+    if (!localAudioStream) {
+        alert('Микрофон не подключен. Пожалуйста, сначала разрешите доступ к микрофону.');
+        requestMicrophoneForCall();
+        return;
+    }
+    
+    // Проверяем, что микрофон все еще активен
+    const audioTracks = localAudioStream.getAudioTracks();
+    if (audioTracks.length === 0 || audioTracks[0].readyState !== 'live') {
+        alert('Микрофон недоступен. Пожалуйста, разрешите доступ снова.');
+        requestMicrophoneForCall();
+        return;
+    }
+    
+    isCallActive = true;
+    document.getElementById('callStatus').textContent = 'Звонок активен';
+    document.getElementById('startCallBtn').style.display = 'none';
+    document.getElementById('callControls').style.display = 'block';
+    
+    // Создаем RTCPeerConnection для WebRTC
+    const configuration = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+    };
+    
+    peerConnection = new RTCPeerConnection(configuration);
+    
+    // Добавляем локальный аудио поток
+    localAudioStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localAudioStream);
+    });
+    
+    // Обработка удаленного аудио потока
+    peerConnection.ontrack = (event) => {
+        remoteAudioStream = event.streams[0];
+        const remoteAudio = document.getElementById('remoteAudio');
+        remoteAudio.srcObject = remoteAudioStream;
+        console.log('[OK] Получен удаленный аудио поток');
+    };
+    
+    // Обработка ICE кандидатов
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            console.log('[INFO] ICE кандидат:', event.candidate);
+            // Здесь должна быть отправка кандидата через сигнальный сервер
+        }
+    };
+    
+    // Создаем предложение (offer)
+    peerConnection.createOffer()
+        .then(offer => {
+            return peerConnection.setLocalDescription(offer);
+        })
+        .then(() => {
+            console.log('[OK] Offer создан');
+            // Здесь должна быть отправка offer через сигнальный сервер
+            // Для демонстрации показываем сообщение
+            document.getElementById('callStatus').textContent = 'Ожидание ответа...';
+        })
+        .catch(error => {
+            console.error('[ERROR] Ошибка создания offer:', error);
+            alert('Ошибка установления соединения');
+            endAudioCall();
+        });
+    
+    // Симуляция: через 2 секунды "подключаем" удаленный поток
+    setTimeout(() => {
+        if (isCallActive) {
+            document.getElementById('callStatus').textContent = 'Звонок установлен';
+            // В реальном приложении здесь будет установка удаленного описания
+        }
+    }, 2000);
+}
+
+function toggleMute() {
+    if (!localAudioStream) return;
+    
+    const audioTracks = localAudioStream.getAudioTracks();
+    if (audioTracks.length > 0) {
+        const isMuted = !audioTracks[0].enabled;
+        audioTracks[0].enabled = isMuted;
+        
+        const muteBtn = document.getElementById('muteBtn');
+        const muteText = document.getElementById('muteText');
+        
+        if (isMuted) {
+            muteBtn.classList.remove('btn-warning');
+            muteBtn.classList.add('btn-secondary');
+            muteText.textContent = 'Включить микрофон';
+        } else {
+            muteBtn.classList.remove('btn-secondary');
+            muteBtn.classList.add('btn-warning');
+            muteText.textContent = 'Выключить микрофон';
+        }
+    }
+}
+
+function endAudioCall() {
+    isCallActive = false;
+    
+    // Останавливаем локальный поток
+    if (localAudioStream) {
+        localAudioStream.getTracks().forEach(track => track.stop());
+        localAudioStream = null;
+    }
+    
+    // Закрываем peer connection
+    if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+    }
+    
+    // Удаляем модальное окно
+    const modal = document.getElementById('audioCallModal');
+    if (modal) {
+        modal.remove();
+    }
+    
+    console.log('[INFO] Звонок завершен');
+}
+
+
+// Загружаем счетчик непрочитанных при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    updateConversationList();
+    setInterval(updateConversationList, 10000); // Обновляем каждые 10 секунд
+    
+    // Закрываем результаты поиска при клике вне области
+    document.addEventListener('click', function(e) {
+        const searchResults = document.getElementById('searchResults');
+        const userSearch = document.getElementById('userSearch');
+        if (searchResults && userSearch && !searchResults.contains(e.target) && !userSearch.contains(e.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}
+

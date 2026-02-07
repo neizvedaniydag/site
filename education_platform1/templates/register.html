@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
+        <h1>Регистрация</h1>
+        <form method="POST" action="{{ url_for('register') }}">
+            <div class="form-group">
+                <label for="username">Имя пользователя:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="nickname">Никнейм (для поиска):</label>
+                <input type="text" id="nickname" name="nickname" placeholder="Уникальный никнейм" required>
+                <small style="color: #666;">По этому никнейму вас смогут найти другие пользователи</small>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Пароль:</label>
+                <input type="password" id="password" name="password" required minlength="6">
+            </div>
+
+            <div class="form-group">
+                <label for="role">Роль:</label>
+                <select id="role" name="role" required style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="student" selected>Ученик</option>
+                    <option value="teacher">Учитель</option>
+                </select>
+                <small style="color: #666;">
+                    Учитель может контролировать учеников и просматривать их результаты
+                </small>
+            </div>
+
+            <button type="submit" class="btn-primary">Зарегистрироваться</button>
+        </form>
+
+        <p class="auth-footer">
+            Уже есть аккаунт? <a href="{{ url_for('login') }}">Войти</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

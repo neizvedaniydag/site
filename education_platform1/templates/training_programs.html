@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Программы тренировок</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-12 mb-4">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createProgramModal">Создать программу</button>
+        </div>
+        
+        <div class="col-md-12">
+            <div class="row">
+                {% for program in programs %}
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ program.title }}</h5>
+                            <p class="card-text">
+                                <small class="text-muted">Длительность: {{ program.duration }}</small>
+                            </p>
+                            <a href="#" class="btn btn-outline-primary btn-sm" data-schedule='{{ program.schedule|safe }}' onclick="viewSchedule(this.dataset.schedule)">
+                                Посмотреть расписание
+                            </a>
+                            <button class="btn btn-outline-secondary btn-sm" 
+                                data-program-id="{{ program.id }}" 
+                                data-title="{{ program.title|e }}" 
+                                data-duration="{{ program.duration|e }}" 
+                                data-schedule='{{ program.schedule|safe }}' 
+                                onclick='openEditModalFromButton(this)'>Изменить</button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для расписания -->
+<div class="modal fade" id="scheduleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Расписание тренировок</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="scheduleContent">
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function safeParseSchedule(schedule) {
+    if (!schedule) return null;
+    if (typeof schedule === 'object') return schedule;
+    try {
+        let parsed = JSON.parse(schedule);
+        if (typeof parsed === 'string') {
+            parsed = JSON.parse(parsed);
+        }
+        return parsed;
+    } catch (err) {
+        try {
+            const replaced = schedule.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+            let parsed = JSON.parse(replaced);
+            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+            return parsed;
+        } catch (err2) {
+            console.error('Failed to parse schedule', err2);
+            return null;
+        }
+    }
+}
+
+function viewSchedule(schedule) {
+    try {
+        const scheduleData = safeParseSchedule(schedule);
+        let content = '<div class="table-responsive"><table class="table">';
+        content += '<thead><tr><th>День</th><th>Упражнения</th></tr></thead><tbody>';
+        if (!scheduleData) throw new Error('invalid');
+
+        for (const [day, exercises] of Object.entries(scheduleData)) {
+            content += `<tr><td>${day}</td><td>${exercises.join('<br>')}</td></tr>`;
+        }
+        
+        content += '</tbody></table></div>';
+        document.getElementById('scheduleContent').innerHTML = content;
+        new bootstrap.Modal(document.getElementById('scheduleModal')).show();
+    } catch (err) {
+        console.error('Invalid schedule JSON', err, schedule);
+        alert('Не удалось показать расписание (некорректные данные).');
+    }
+}
+</script>
+
+<!-- Модальное окно редактирования программы -->
+<div class="modal fade" id="editProgramModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редактировать программу</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editProgramForm">
+                    <input type="hidden" name="program_id" id="edit_program_id">
+                    <div class="mb-3">
+                        <label class="form-label">Название программы</label>
+                        <input type="text" class="form-control" name="title" id="edit_title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Длительность</label>
+                        <input type="text" class="form-control" name="duration" id="edit_duration" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Расписание (JSON)</label>
+                        <textarea class="form-control" name="schedule" id="edit_schedule" rows="6"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно создания через ИИ -->
+<div class="modal fade" id="aiCreateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Создать программу с помощью ИИ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="aiCreateForm">
+                    <div class="mb-3">
+                        <label class="form-label">Цель (например: похудение, сила, выносливость)</label>
+                        <input type="text" class="form-control" name="goal" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Длительность</label>
+                        <input type="text" class="form-control" name="duration" value="1 месяц">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Уровень</label>
+                        <select class="form-select" name="level">
+                            <option value="начальный">начальный</option>
+                            <option value="средний">средний</option>
+                            <option value="продвинутый">продвинутый</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-success">Сгенерировать</button>
+                    </div>
+                </form>
+
+                <div id="aiPreview" style="display:none">
+                    <h6>Предпросмотр</h6>
+                    <div id="aiPreviewContent"></div>
+                    <button id="aiSaveBtn" class="btn btn-primary mt-2">Сохранить как программу</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openEditModal(id, title, duration, schedule){
+    document.getElementById('edit_program_id').value = id;
+    document.getElementById('edit_title').value = title;
+    document.getElementById('edit_duration').value = duration;
+    try{
+        const sched = safeParseSchedule(schedule);
+        document.getElementById('edit_schedule').value = JSON.stringify(sched || {}, null, 2);
+    }catch(e){
+        document.getElementById('edit_schedule').value = schedule;
+    }
+    new bootstrap.Modal(document.getElementById('editProgramModal')).show();
+}
+
+function openEditModalFromButton(btn){
+    const ds = btn.dataset;
+    openEditModal(ds.programId, ds.title, ds.duration, ds.schedule);
+}
+
+document.getElementById('editProgramForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const id = document.getElementById('edit_program_id').value;
+    const payload = {
+        title: document.getElementById('edit_title').value,
+        duration: document.getElementById('edit_duration').value,
+    };
+    try{
+        payload.schedule = JSON.parse(document.getElementById('edit_schedule').value || '{}');
+    }catch(e){
+        alert('Неверный JSON в поле расписания');
+        return;
+    }
+
+    const resp = await fetch(`/training-programs/${id}/edit`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+    });
+    const res = await resp.json();
+    if(res.success){
+        location.reload();
+    }else{
+        alert('Ошибка: ' + (res.error || JSON.stringify(res)));
+    }
+});
+
+// AI create
+document.getElementById('aiCreateForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const form = new FormData(e.target);
+    const data = {
+        goal: form.get('goal'),
+        duration: form.get('duration'),
+        level: form.get('level')
+    };
+    document.getElementById('aiPreview').style.display = 'none';
+    try{
+        const resp = await fetch('/api/generate-training-program', {
+            method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
+        });
+        const json = await resp.json();
+        if(!json.success){
+            alert('Ошибка ИИ: ' + (json.error || JSON.stringify(json)));
+            return;
+        }
+        const program = json.program;
+        document.getElementById('aiPreviewContent').innerText = JSON.stringify(program, null, 2);
+        document.getElementById('aiPreview').style.display = 'block';
+
+        document.getElementById('aiSaveBtn').onclick = async ()=>{
+            const createResp = await fetch('/training-programs/create', {
+                method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(program)
+            });
+            if(createResp.ok){ location.reload(); }
+            else{ alert('Ошибка сохранения программы'); }
+        };
+
+    }catch(err){
+        console.error(err); alert('Ошибка при общении с сервером');
+    }
+});
+</script>
+
+<!-- Модальное окно создания программы -->
+<div class="modal fade" id="createProgramModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Создать программу тренировок</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createProgramForm">
+                    <div class="mb-3">
+                        <label class="form-label">Название программы</label>
+                        <input type="text" class="form-control" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Длительность</label>
+                        <select class="form-select" name="duration" required>
+                            <option value="1 неделя">1 неделя</option>
+                            <option value="2 недели">2 недели</option>
+                            <option value="1 месяц">1 месяц</option>
+                            <option value="2 месяца">2 месяца</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Расписание тренировок</label>
+                        <div id="scheduleBuilder">
+                            {% for day in ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'] %}
+                            <div class="card mb-2">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ day }}</h6>
+                                    <div class="exercise-list" data-day="{{ day }}">
+                                        <div class="input-group mb-2">
+                                            <input type="text" class="form-control" placeholder="Упражнение">
+                                            <input type="number" class="form-control" placeholder="Подходы" style="max-width: 100px;">
+                                            <input type="number" class="form-control" placeholder="Повторения" style="max-width: 100px;">
+                                            <button type="button" class="btn btn-outline-danger" onclick="removeExercise(this)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addExercise('{{ day }}')">
+                                        <i class="bi bi-plus"></i> Добавить упражнение
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Создать программу</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function addExercise(day) {
+    const exerciseList = document.querySelector(`[data-day="${day}"]`);
+    const newExercise = document.createElement('div');
+    newExercise.className = 'input-group mb-2';
+    newExercise.innerHTML = `
+        <input type="text" class="form-control" placeholder="Упражнение">
+        <input type="number" class="form-control" placeholder="Подходы" style="max-width: 100px;">
+        <input type="number" class="form-control" placeholder="Повторения" style="max-width: 100px;">
+        <button type="button" class="btn btn-outline-danger" onclick="removeExercise(this)">
+            <i class="bi bi-trash"></i>
+        </button>
+    `;
+    exerciseList.appendChild(newExercise);
+}
+
+function removeExercise(button) {
+    button.closest('.input-group').remove();
+}
+
+document.getElementById('createProgramForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const schedule = {};
+    
+    document.querySelectorAll('#scheduleBuilder .card').forEach(dayCard => {
+        const day = dayCard.querySelector('.card-title').textContent.trim();
+        const exercises = [];
+        dayCard.querySelectorAll('.input-group').forEach(group => {
+            const inputs = group.querySelectorAll('input');
+            const exercise = inputs[0].value;
+            const sets = inputs[1].value;
+            const reps = inputs[2].value;
+            if (exercise) {
+                exercises.push(`${exercise} - ${sets}×${reps}`);
+            }
+        });
+        if (exercises.length > 0) {
+            schedule[day] = exercises;
+        }
+    });
+
+    const data = {
+        title: formData.get('title'),
+        duration: formData.get('duration'),
+        schedule: schedule
+    };
+
+    try {
+        const response = await fetch('/training-programs/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            location.reload();
+        } else {
+            const err = await response.json();
+            alert('Ошибка создания программы: ' + (err.error || JSON.stringify(err)));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Ошибка сети при создании программы');
+    }
+});
+</script>
+
+{% endblock %}

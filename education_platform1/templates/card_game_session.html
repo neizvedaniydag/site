@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block title %}Игра - {{ session.title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/card_game.css') }}">
+<style>
+.cards-scroll-container {
+    max-height: 600px;
+    overflow-y: auto;
+}
+.answer-card, .check-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+}
+.rating-buttons .btn {
+    min-width: 50px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Заголовок -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-gamepad"></i> {{ session.title }}</h2>
+            <p class="text-muted">{{ session.topic }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('view_card_game_session', session_id=session.id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> К сессии
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Мои карточки для ответов -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-question-circle"></i> Мои карточки для ответов ({{ my_cards|length }})</h5>
+                </div>
+                <div class="card-body">
+                    {% if my_cards %}
+                    <div class="cards-scroll-container">
+                        {% for card in my_cards %}
+                        <div class="card mb-4 shadow-sm">
+                            <div class="card-body answer-card">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="card-title mb-0">Карточка {{ loop.index }} / {{ my_cards|length }}</h6>
+                                    <span class="badge bg-primary">Моя карточка</span>
+                                </div>
+                                
+                                <div class="alert alert-info mb-3">
+                                    <strong><i class="fas fa-question"></i> Вопрос:</strong><br>
+                                    {{ card.question }}
+                                </div>
+
+                                <div class="alert alert-success mb-3">
+                                    <strong><i class="fas fa-check-circle"></i> Правильный ответ:</strong><br>
+                                    {{ card.answer }}
+                                </div>
+
+                                {% if card.explanation %}
+                                <div class="alert alert-light mb-3">
+                                    <strong><i class="fas fa-info-circle"></i> Объяснение:</strong><br>
+                                    <small>{{ card.explanation }}</small>
+                                </div>
+                                {% endif %}
+
+                                <hr>
+
+                                {# Проверка на существующий ответ #}
+                                {% set my_answer = card.answers|selectattr('user_id', 'equalto', current_user.id)|first %}
+                                
+                                {% if my_answer %}
+                                <div class="alert alert-info">
+                                    <strong><i class="fas fa-check-circle"></i> Вы уже ответили</strong><br>
+                                    <div class="bg-white p-3 rounded mt-2">
+                                        {{ my_answer.answer_text }}
+                                    </div>
+                                    {% if my_answer.checked_by_user_id %}
+                                    <hr>
+                                    <strong>Оценка:</strong> {{ my_answer.rating }}/5 ⭐
+                                    {% if my_answer.is_correct %}
+                                    <span class="badge bg-success ms-2">✅ Правильно</span>
+                                    {% else %}
+                                    <span class="badge bg-danger ms-2">❌ Неправильно</span>
+                                    {% endif %}
+                                    {% if my_answer.feedback %}
+                                    <br><strong>Комментарий:</strong> <em>{{ my_answer.feedback }}</em>
+                                    {% endif %}
+                                    {% else %}
+                                    <hr>
+                                    <small class="text-muted">⏳ Ожидание проверки товарищами</small>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <form onsubmit="submitAnswer(event, {{ card.id }})">
+                                    <div class="mb-3">
+                                        <label class="form-label"><strong>Ваш ответ:</strong> <span class="text-danger">*</span></label>
+                                        <textarea class="form-control" id="answer-{{ card.id }}" 
+                                                  rows="4" required 
+                                                  placeholder="Напишите ваш ответ на этот вопрос..."></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-success w-100">
+                                        <i class="fas fa-paper-plane"></i> Отправить ответ
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-inbox" style="font-size: 3rem;"></i><br>
+                        <p class="mt-3">Вам пока не назначены карточки</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Карточки для проверки -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-check-square"></i> Ответы товарищей для проверки</h5>
+                </div>
+                <div class="card-body">
+                    {% if cards_to_check %}
+                    <div class="cards-scroll-container">
+                        {% for card in cards_to_check %}
+                            <div class="card mb-4 shadow-sm">
+                                <div class="card-body check-card">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <h6 class="card-title mb-0"><i class="fas fa-question"></i> {{ card.question }}</h6>
+                                        {% if card.assigned_to_user_id %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-user"></i> Отвечает: {{ card.assigned_to.username }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="alert alert-success mb-3">
+                                        <strong><i class="fas fa-check-circle"></i> Правильный ответ:</strong><br>
+                                        {{ card.answer }}
+                                    </div>
+
+                                    {% if card.explanation %}
+                                    <div class="alert alert-light mb-3">
+                                        <strong><i class="fas fa-info-circle"></i> Объяснение:</strong><br>
+                                        <small>{{ card.explanation }}</small>
+                                    </div>
+                                    {% endif %}
+
+                                    <hr>
+
+                                    {# Показываем только ответ назначенного участника #}
+                                    {% if card.assigned_to_user_id %}
+                                        {% set assigned_answer = card.answers|selectattr('user_id', 'equalto', card.assigned_to_user_id)|first %}
+                                        
+                                        {% if assigned_answer %}
+                                            <div class="alert alert-light border">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <strong><i class="fas fa-user"></i> {{ card.assigned_to.username }}</strong>
+                                                    <span class="badge bg-primary">Ответил</span>
+                                                </div>
+                                                <div class="bg-white p-3 rounded mb-3 border">
+                                                    {{ assigned_answer.answer_text }}
+                                                </div>
+                                                
+                                                {% if not assigned_answer.checked_by_user_id %}
+                                                <form onsubmit="submitRating(event, {{ assigned_answer.id }})">
+                                                    <div class="mb-3">
+                                                        <label class="form-label"><strong>Правильность:</strong></label>
+                                                        <div class="form-check">
+                                                            <input type="radio" class="form-check-input" 
+                                                                   name="correct-{{ assigned_answer.id }}" 
+                                                                   value="true" id="correct-{{ assigned_answer.id }}-yes" required>
+                                                            <label class="form-check-label" for="correct-{{ assigned_answer.id }}-yes">
+                                                                ✅ Правильно
+                                                            </label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input type="radio" class="form-check-input" 
+                                                                   name="correct-{{ assigned_answer.id }}" 
+                                                                   value="false" id="correct-{{ assigned_answer.id }}-no" required>
+                                                            <label class="form-check-label" for="correct-{{ assigned_answer.id }}-no">
+                                                                ❌ Неправильно
+                                                            </label>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="mb-3">
+                                                        <label class="form-label"><strong>Оценка (1-5):</strong></label>
+                                                        <div class="rating-buttons d-flex gap-2 flex-wrap">
+                                                            {% for i in range(1, 6) %}
+                                                            <div>
+                                                                <input type="radio" class="btn-check" 
+                                                                       name="rating-{{ assigned_answer.id }}" 
+                                                                       value="{{ i }}" 
+                                                                       id="rating-{{ assigned_answer.id }}-{{ i }}" required>
+                                                                <label class="btn btn-outline-warning" 
+                                                                       for="rating-{{ assigned_answer.id }}-{{ i }}"
+                                                                       title="{{ i }} из 5">
+                                                                    {{ i }} ⭐
+                                                                </label>
+                                                            </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="mb-3">
+                                                        <label class="form-label"><strong>Комментарий:</strong></label>
+                                                        <textarea class="form-control" 
+                                                                  id="feedback-{{ assigned_answer.id }}" 
+                                                                  rows="3" 
+                                                                  placeholder="Ваш комментарий (необязательно)"></textarea>
+                                                    </div>
+
+                                                    <button type="submit" class="btn btn-success w-100">
+                                                        <i class="fas fa-check"></i> Сохранить оценку
+                                                    </button>
+                                                </form>
+                                                {% else %}
+                                                <div class="alert alert-success mb-0">
+                                                    <strong><i class="fas fa-check-circle"></i> Уже проверено</strong>
+                                                    {% if assigned_answer.checked_by %}
+                                                    <span class="text-muted">({{ assigned_answer.checked_by.username }})</span>
+                                                    {% endif %}
+                                                    <hr class="my-2">
+                                                    <div><strong>Оценка:</strong> {{ assigned_answer.rating }}/5 ⭐</div>
+                                                    <div>
+                                                        {% if assigned_answer.is_correct %}
+                                                        <span class="badge bg-success">✅ Правильно</span>
+                                                        {% else %}
+                                                        <span class="badge bg-danger">❌ Неправильно</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if assigned_answer.feedback %}
+                                                    <div class="mt-2">
+                                                        <strong>Комментарий:</strong><br>
+                                                        <em>{{ assigned_answer.feedback }}</em>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <div class="alert alert-warning">
+                                                <i class="fas fa-hourglass-half"></i> 
+                                                <strong>{{ card.assigned_to.username }}</strong> еще не ответил на эту карточку
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="alert alert-secondary">
+                                            <i class="fas fa-info-circle"></i> Карточка еще не назначена участнику
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-check" style="font-size: 3rem;"></i><br>
+                        <p class="mt-3">Нет карточек для проверки</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function submitAnswer(event, cardId) {
+    event.preventDefault();
+    const answerText = document.getElementById(`answer-${cardId}`).value.trim();
+    
+    if (!answerText) {
+        alert('Введите ответ!');
+        return;
+    }
+    
+    const btn = event.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
+    
+    fetch(`/api/card-game/card/${cardId}/answer`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({answer_text: answerText})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ Ответ отправлен!');
+            location.reload();
+        } else {
+            alert('Ошибка: ' + data.error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить ответ';
+        }
+    })
+    .catch(err => {
+        alert('Ошибка: ' + err);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить ответ';
+    });
+}
+
+function submitRating(event, answerId) {
+    event.preventDefault();
+    const rating = document.querySelector(`input[name="rating-${answerId}"]:checked`);
+    const isCorrect = document.querySelector(`input[name="correct-${answerId}"]:checked`);
+    const feedback = document.getElementById(`feedback-${answerId}`).value.trim();
+    
+    if (!rating || !isCorrect) {
+        alert('⚠️ Выберите правильность и оценку!');
+        return;
+    }
+    
+    const btn = event.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
+    
+    fetch(`/api/card-game/answer/${answerId}/rate`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            rating: parseInt(rating.value),
+            is_correct: isCorrect.value === 'true',
+            feedback: feedback
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ Оценка сохранена!');
+            location.reload();
+        } else {
+            alert('Ошибка: ' + data.error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> Сохранить оценку';
+        }
+    })
+    .catch(err => {
+        alert('Ошибка: ' + err);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Сохранить оценку';
+    });
+}
+</script>
+
+{% endblock %}
