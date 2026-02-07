@@ -1567,13 +1567,27 @@ def card_game():
     my_sessions = GameSession.query.filter_by(creator_id=current_user.id).order_by(GameSession.created_at.desc()).all()
     
     # Сессии, в которых я участвую
-    my_participations = GameParticipant.query.filter_by(user_id=current_user.id).all()
-    participated_session_ids = [p.session_id for p in my_participations]
-    participant_sessions = GameSession.query.filter(GameSession.id.in_(participated_session_ids)).order_by(GameSession.created_at.desc()).all() if participated_session_ids else []
+    try:
+        participant_sessions = (
+            GameSession.query.join(
+                GameParticipant,
+                GameParticipant.session_id == GameSession.id
+            )
+            .filter(GameParticipant.user_id == current_user.id)
+            .order_by(GameSession.created_at.desc())
+            .distinct()
+            .all()
+        )
+    except Exception as error:
+        app.logger.exception("Failed to load card game participant sessions: %s", error)
+        flash('Не удалось загрузить список приглашений. Попробуйте обновить страницу.', 'danger')
+        participant_sessions = []
     
-    return render_template('card_game.html', 
-                         my_sessions=my_sessions, 
-                         participant_sessions=participant_sessions)
+    return render_template(
+        'card_game.html',
+        my_sessions=my_sessions,
+        joined_sessions=participant_sessions
+    )
 
 @app.route('/card-game/create', methods=['GET', 'POST'])
 @login_required
