@@ -1,0 +1,109 @@
+/* Навигация */
+.navbar {
+    background-color: #ffffff !important;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.nav-menu {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: 1.5rem;
+}
+
+.nav-menu li a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #333 !important;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.nav-menu li a:hover {
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    color: #000 !important;
+}
+
+.nav-menu li a.active {
+    background-color: #eaf4ff;
+    border: 1px solid #3498db;
+    color: #3498db !important;
+}
+
+.logo {
+    color: #333 !important;
+}
+
+/* Карточки */
+.card {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.badge {
+    margin-right: 5px;
+}
+
+.list-group-item {
+    transition: background-color 0.2s;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Стили для раздела обучения */
+.learning-section {
+    margin-bottom: 2rem;
+}
+
+/* Стили для программ тренировок */
+.program-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.program-card .card-body {
+    flex: 1;
+}
+
+/* Стили для дневника питания */
+.meal-entry {
+    border-left: 4px solid #007bff;
+    padding-left: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* Стили для фитнес игр */
+.game-card {
+    height: 100%;
+    background: linear-gradient(to bottom right, #ffffff, #f8f9fa);
+}
+
+.game-card .badge {
+    font-size: 0.8rem;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .nav-menu {
+        flex-direction: column;
+    }
+    
+    .nav-menu li {
+        margin: 5px 0;
+    }
+}

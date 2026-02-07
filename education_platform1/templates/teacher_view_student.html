@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% block title %}Профиль ученика: {{ student.username }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .student-profile-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .back-link {
+        margin-bottom: 1rem;
+        display: inline-block;
+    }
+    
+    .profile-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .profile-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .info-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .info-card h3 {
+        margin-top: 0;
+        color: #667eea;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    
+    .results-section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .result-item {
+        padding: 1rem;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .result-item:last-child {
+        border-bottom: none;
+    }
+    
+    .badge-custom {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .badge-primary {
+        background: #667eea;
+        color: white;
+    }
+    
+    .badge-success {
+        background: #10b981;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="student-profile-container">
+    <a href="{{ url_for('teacher_students') }}" class="back-link">
+        <i class="bi bi-arrow-left"></i> Назад к списку учеников
+    </a>
+    
+    <!-- Заголовок профиля -->
+    <div class="profile-header">
+        <h1 style="margin: 0;">{{ student.nickname or student.username }}</h1>
+        <p style="margin: 0.5rem 0 0; opacity: 0.9;">@{{ student.nickname or student.username }}</p>
+    </div>
+    
+    <!-- Основная информация -->
+    <div class="profile-info-grid">
+        <div class="info-card">
+            <h3><i class="bi bi-person"></i> Личная информация</h3>
+            <div class="info-item">
+                <span>Имя пользователя:</span>
+                <strong>{{ student.username }}</strong>
+            </div>
+            <div class="info-item">
+                <span>Никнейм:</span>
+                <strong>{{ student.nickname or 'Не установлен' }}</strong>
+            </div>
+            <div class="info-item">
+                <span>Email:</span>
+                <strong>{{ student.email }}</strong>
+            </div>
+            <div class="info-item">
+                <span>ID:</span>
+                <strong>#{{ student.id }}</strong>
+            </div>
+        </div>
+        
+        <div class="info-card">
+            <h3><i class="bi bi-bar-chart"></i> Статистика</h3>
+            <div class="info-item">
+                <span>Пройдено тестов:</span>
+                <strong>{{ tests|length }}</strong>
+            </div>
+            <div class="info-item">
+                <span>Средняя оценка:</span>
+                <strong><span class="badge-custom badge-primary">{{ avg_score }}%</span></strong>
+            </div>
+            <div class="info-item">
+                <span>Тренировок:</span>
+                <strong>{{ pe_results|length }}</strong>
+            </div>
+            <div class="info-item">
+                <span>Дата регистрации:</span>
+                <strong>{{ student.created_at.strftime('%d.%m.%Y') }}</strong>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Результаты тестов -->
+    <div class="results-section">
+        <h3><i class="bi bi-check-square"></i> Результаты тестов</h3>
+        {% if tests %}
+            {% for test in tests %}
+            <div class="result-item">
+                <div>
+                    <strong>{{ test.subject }} - {{ test.topic }}</strong><br>
+                    <small style="color: #666;">{{ test.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                </div>
+                <div>
+                    {% if test.score %}
+                        <span class="badge-custom badge-primary">{{ test.score }}%</span>
+                    {% else %}
+                        <span style="color: #999;">Не завершен</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color: #999; text-align: center; padding: 2rem;">Ученик еще не проходил тесты</p>
+        {% endif %}
+    </div>
+    
+    <!-- Результаты тренировок -->
+    <div class="results-section">
+        <h3><i class="bi bi-lightning"></i> Результаты тренировок</h3>
+        {% if pe_results %}
+            {% for pe in pe_results %}
+            <div class="result-item">
+                <div>
+                    <strong>{{ pe.exercise_type }}</strong><br>
+                    <small style="color: #666;">
+                        Повторений: {{ pe.repetitions }} | 
+                        Правильно: {{ pe.correct_count }} | 
+                        Неправильно: {{ pe.incorrect_count }}
+                    </small><br>
+                    <small style="color: #999;">{{ pe.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                </div>
+                <div>
+                    {% if pe.score %}
+                        <span class="badge-custom badge-success">{{ pe.score }}%</span>
+                    {% else %}
+                        <span style="color: #999;">-</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color: #999; text-align: center; padding: 2rem;">Ученик еще не выполнял тренировки</p>
+        {% endif %}
+    </div>
+    
+    <div class="results-section">
+        <h3><i class="bi bi-calendar-check"></i> Программы тренировок</h3>
+        {% if training_programs %}
+            <ul class="list-group">
+                {% for program in training_programs %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ program.title }}
+                    <span class="badge bg-secondary">{{ program.duration }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p style="color: #999; text-align: center; padding: 2rem;">Программы не назначены</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

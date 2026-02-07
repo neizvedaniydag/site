@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Фитнес игры</h1>
+
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="list-group" id="gamesList">
+                <button class="list-group-item list-group-item-action" data-game="snake">1. Змейка</button>
+                <button class="list-group-item list-group-item-action" data-game="racing">2. Гонки (управление влево/вправо)</button>
+                <button class="list-group-item list-group-item-action" data-game="catch">3. Поймай предметы (клик/движение)</button>
+                <button class="list-group-item list-group-item-action" data-game="reflex">4. Рефлекс (реакция)</button>
+                <button class="list-group-item list-group-item-action" data-game="memory">5. Память (повтор последовательности)</button>
+            </div>
+            <div class="card mt-3">
+                <div class="card-body text-center">
+                    <h5>Статистика</h5>
+                    <p>Сыграно игр: <span id="totalGames">{{ stats.total_games if stats else 0 }}</span></p>
+                    <p>Общий счёт: <span id="totalScore">{{ stats.total_score if stats else 0 }}</span></p>
+                    <p>Средняя точность: <span id="avgAccuracy">{{ stats.avg_accuracy if stats else 0 }}%</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title" id="gameTitle">Выберите игру</h5>
+                    <div id="gameArea">
+                        <!-- dynamic game containers -->
+                        <canvas id="gameCanvas" width="800" height="450" style="border:1px solid #ccc; display:none; width:100%; height:auto;"></canvas>
+                        <div id="gameControls" style="display:none; margin-top:10px;"></div>
+                        <div id="gameInfo" class="mt-2"></div>
+                    </div>
+                    <div class="mt-3">
+                        <button id="startBtn" class="btn btn-success" style="display:none;">Начать</button>
+                        <button id="stopBtn" class="btn btn-danger" style="display:none;">Закончить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load sprites
+const IMG_SNAKE_URL = "{{ url_for('static', filename='imgs/snake_segment.svg') }}";
+const IMG_CAR_URL = "{{ url_for('static', filename='imgs/car_sprite.svg') }}";
+const IMG_OBSTACLE_URL = "{{ url_for('static', filename='imgs/obstacle.svg') }}";
+const IMG_ITEM_URL = "{{ url_for('static', filename='imgs/item.svg') }}";
+const IMG_BASKET_URL = "{{ url_for('static', filename='imgs/basket.svg') }}";
+const IMG_CHAR_URL = "{{ url_for('static', filename='imgs/character.svg') }}";
+
+const imgSnake = new Image(); imgSnake.src = IMG_SNAKE_URL;
+const imgCar = new Image(); imgCar.src = IMG_CAR_URL;
+const imgObstacle = new Image(); imgObstacle.src = IMG_OBSTACLE_URL;
+const imgItem = new Image(); imgItem.src = IMG_ITEM_URL;
+const imgBasket = new Image(); imgBasket.src = IMG_BASKET_URL;
+const imgChar = new Image(); imgChar.src = IMG_CHAR_URL;
+
+// Simple in-page mini-games: snake, racing, catch, reflex, memory
+let activeGame = null;
+let canvas = document.getElementById('gameCanvas');
+let ctx = canvas.getContext('2d');
+let animationId = null;
+let score = 0;
+
+function setInfo(html){ document.getElementById('gameInfo').innerHTML = html; }
+function showStartStop(show){ document.getElementById('startBtn').style.display = show ? 'inline-block' : 'none'; document.getElementById('stopBtn').style.display = show ? 'inline-block' : 'none'; }
+
+document.querySelectorAll('#gamesList button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+        const game = btn.dataset.game;
+        loadGame(game);
+    });
+});
+
+document.getElementById('startBtn').addEventListener('click', ()=>{ startActiveGame(); });
+document.getElementById('stopBtn').addEventListener('click', ()=>{ endActiveGame(); });
+
+function loadGame(name){
+    stopAnimation();
+    activeGame = name;
+    document.getElementById('gameTitle').textContent = ({snake:'Змейка', racing:'Гонки', catch:'Поймай', reflex:'Рефлекс', memory:'Память'})[name] || name;
+    canvas.style.display = 'block';
+    setInfo('Нажмите "Начать" чтобы запустить игру');
+    showStartStop(true);
+    // reset canvas
+    ctx.clearRect(0,0,canvas.width, canvas.height);
+}
+
+function startActiveGame(){ score = 0; setInfo('Счёт: 0');
+    if(activeGame === 'snake') startSnake();
+    else if(activeGame === 'racing') startRacing();
+    else if(activeGame === 'catch') startCatch();
+    else if(activeGame === 'reflex') startReflex();
+    else if(activeGame === 'memory') startMemory();
+}
+
+function endActiveGame(){
+    stopAnimation();
+    saveResult(activeGame, score, 100);
+    setInfo('Игра завершена. Счёт: '+score);
+    showStartStop(false);
+}
+
+function stopAnimation(){ if(animationId) cancelAnimationFrame(animationId); animationId = null; window.onkeydown = null; canvas.onclick = null; }
+
+function saveResult(game_type, score_value, accuracy){
+    fetch('/fitness-games/save-result', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({game_type, score:score_value, accuracy})})
+    .then(()=>fetch('/fitness-games/stats')).then(r=>r.json()).then(s=>{
+        document.getElementById('totalGames').textContent = s.total_games;
+        document.getElementById('totalScore').textContent = s.total_score;
+        document.getElementById('avgAccuracy').textContent = s.avg_accuracy + '%';
+    }).catch(e=>console.error(e));
+}
+
+// --------- Snake ---------
+function startSnake(){
+    const grid = 20; const cols = Math.floor(canvas.width/grid); const rows = Math.floor(canvas.height/grid);
+    let snake = [{x:Math.floor(cols/2), y:Math.floor(rows/2)}];
+    let dir = {x:1,y:0};
+    let food = spawnFood();
+    window.onkeydown = (e)=>{
+        if(e.key==='ArrowUp'){ dir={x:0,y:-1}; }
+        if(e.key==='ArrowDown'){ dir={x:0,y:1}; }
+        if(e.key==='ArrowLeft'){ dir={x:-1,y:0}; }
+        if(e.key==='ArrowRight'){ dir={x:1,y:0}; }
+    };
+    function spawnFood(){ return {x:Math.floor(Math.random()*cols), y:Math.floor(Math.random()*rows)}; }
+    function loop(){
+        // move
+        const head = {x:snake[0].x+dir.x, y:snake[0].y+dir.y};
+        if(head.x<0||head.x>=cols||head.y<0||head.y>=rows||snake.some(s=>s.x===head.x&&s.y===head.y)){
+            endActiveGame(); return; }
+        snake.unshift(head);
+        if(head.x===food.x && head.y===food.y){ score+=10; food=spawnFood(); }
+        else snake.pop();
+        // draw (background + sprites)
+        ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+        snake.forEach(s=>{
+            if(imgSnake.complete) ctx.drawImage(imgSnake, s.x*grid, s.y*grid, grid-2, grid-2);
+            else { ctx.fillStyle='lime'; ctx.fillRect(s.x*grid, s.y*grid, grid-2, grid-2); }
+        });
+        if(imgItem.complete) ctx.drawImage(imgItem, food.x*grid, food.y*grid, grid-2, grid-2);
+        else { ctx.fillStyle='red'; ctx.fillRect(food.x*grid, food.y*grid, grid-2, grid-2); }
+        setInfo('Счёт: '+score);
+        animationId = requestAnimationFrame(()=>setTimeout(loop, 100));
+    }
+    loop();
+}
+
+// --------- Racing (simple) ---------
+function startRacing(){
+    const car = {x:canvas.width/2-20,y:canvas.height-80,w:40,h:60};
+    let obstacles = [];
+    let speed=3; score=0;
+    window.onkeydown = (e)=>{ if(e.key==='ArrowLeft') car.x -= 30; if(e.key==='ArrowRight') car.x += 30; };
+    function spawn(){ obstacles.push({x:Math.random()*(canvas.width-40), y:-60, w:40, h:60}); }
+    let ticks=0;
+    function loop(){ ticks++; if(ticks%60===0) spawn();
+        ctx.fillStyle='#444'; ctx.fillRect(0,0,canvas.width,canvas.height);
+        // road
+        ctx.fillStyle='#666'; ctx.fillRect(50,0,canvas.width-100,canvas.height);
+        ctx.fillStyle='yellow'; for(let i=0;i<canvas.height;i+=40) ctx.fillRect(canvas.width/2-5,i+ (ticks*5)%40,10,20);
+        // car (sprite)
+        if(imgCar.complete) ctx.drawImage(imgCar, car.x, car.y, car.w, car.h);
+        else ctx.fillStyle='blue', ctx.fillRect(car.x, car.y, car.w, car.h);
+        // obstacles (sprites)
+        for(let i=obstacles.length-1;i>=0;i--){ obstacles[i].y += speed; if(imgObstacle.complete) ctx.drawImage(imgObstacle, obstacles[i].x, obstacles[i].y, obstacles[i].w, obstacles[i].h); else { ctx.fillStyle='maroon'; ctx.fillRect(obstacles[i].x, obstacles[i].y, obstacles[i].w, obstacles[i].h); }
+            if(obstacles[i].y>canvas.height) { obstacles.splice(i,1); score+=5; }
+            // collision
+            if(!(car.x+car.w < obstacles[i].x || car.x > obstacles[i].x+obstacles[i].w || car.y+car.h < obstacles[i].y || car.y > obstacles[i].y+obstacles[i].h)){ endActiveGame(); return; }
+        }
+        setInfo('Счёт: '+score);
+        animationId = requestAnimationFrame(loop);
+    }
+    loop();
+}
+
+// --------- Catch (click falling items) ---------
+function startCatch(){
+    let items=[]; let basketX = canvas.width/2; score=0;
+    canvas.onclick = (e)=>{ const rect=canvas.getBoundingClientRect(); const x=e.clientX-rect.left; // catch
+        items = items.filter(it=>{ if(Math.abs(it.x-x)<30 && Math.abs(it.y-(canvas.height-30))<40){ score+=10; return false;} return true; });
+    };
+    function loop(){ if(Math.random()<0.03) items.push({x:Math.random()*(canvas.width-40)+20, y:-20, vy:2+Math.random()*3});
+        ctx.fillStyle='#eef'; ctx.fillRect(0,0,canvas.width,canvas.height);
+        for(let i=items.length-1;i>=0;i--){ items[i].y += items[i].vy; if(imgItem.complete) ctx.drawImage(imgItem, items[i].x-12, items[i].y-12, 24, 24); else { ctx.fillStyle='orange'; ctx.beginPath(); ctx.arc(items[i].x, items[i].y, 12,0,Math.PI*2); ctx.fill(); } if(items[i].y>canvas.height-20) items.splice(i,1); }
+        // basket / ground
+        if(imgBasket.complete) ctx.drawImage(imgBasket, canvas.width/2-80, canvas.height-50, 160, 50);
+        else { ctx.fillStyle='brown'; ctx.fillRect(0, canvas.height-30, canvas.width, 30); }
+        setInfo('Счёт: '+score+' (клик по падающим предметам)');
+        animationId = requestAnimationFrame(loop);
+    }
+    loop();
+}
+
+// --------- Reflex ---------
+function startReflex(){
+    score=0; setInfo('Ждите...'); ctx.fillStyle='#222'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    let start=Date.now(); let reacted=false; let timeout = 1000 + Math.random()*3000;
+    setTimeout(()=>{ if(reacted) return; // signal to react: show green background and character sprite
+        ctx.fillStyle='green'; ctx.fillRect(0,0,canvas.width,canvas.height);
+        if(imgChar.complete) ctx.drawImage(imgChar, canvas.width/2-60, canvas.height/2-60, 120, 120);
+        start=Date.now(); canvas.onclick = ()=>{ reacted=true; score = Math.max(0, 1000-Math.round((Date.now()-start))); setInfo('Реакция: '+(1000-Math.round((Date.now()-start)))+' ms'); endActiveGame(); };
+    }, timeout);
+}
+
+// --------- Memory (Simon) ---------
+function startMemory(){
+    const colors=['red','green','blue','yellow']; let sequence=[]; let idx=0; score=0; ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    function drawTiles(){ const w=canvas.width/2, h=canvas.height/2; ctx.fillStyle=colors[0]; ctx.fillRect(0,0,w,h); ctx.fillStyle=colors[1]; ctx.fillRect(w,0,w,h); ctx.fillStyle=colors[2]; ctx.fillRect(0,h,w,h); ctx.fillStyle=colors[3]; ctx.fillRect(w,h,w,h); }
+    drawTiles();
+    function flash(colorIndex){ const area=[ [0,0],[canvas.width/2,0],[0,canvas.height/2],[canvas.width/2,canvas.height/2] ][colorIndex]; ctx.fillStyle='white'; ctx.fillRect(area[0],area[1],canvas.width/2,canvas.height/2); setTimeout(drawTiles,400); }
+    function nextRound(){ sequence.push(Math.floor(Math.random()*4)); playSequence(0); }
+    function playSequence(i){ if(i>=sequence.length){ enableInput(); return;} flash(sequence[i]); setTimeout(()=>playSequence(i+1),600); }
+    function enableInput(){ canvas.onclick = (e)=>{ const rect=canvas.getBoundingClientRect(); const x=e.clientX-rect.left, y=e.clientY-rect.top; const col = x>canvas.width/2?1:0; const row = y>canvas.height/2?1:0; const selected = row*2 + col; if(selected===sequence[idx]){ idx++; if(idx===sequence.length){ score+=10; idx=0; nextRound(); } } else { endActiveGame(); } }; }
+    nextRound();
+}
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Расписание{% endblock %}
+
+{% block content %}
+<div class="schedule-page">
+    <h1>Расписание уроков</h1>
+
+    <div class="schedule-grid">
+        {% for day in days %}
+        <div class="schedule-day">
+            <h2>{{ day }}</h2>
+            <div class="lessons">
+                {% for lesson in schedule_data[day] %}
+                <div class="lesson-card">
+                    <div class="lesson-time">{{ lesson.time_slot }}</div>
+                    <div class="lesson-subject">{{ lesson.subject }}</div>
+                    <div class="lesson-details">
+                        <span>👨‍🏫 {{ lesson.teacher }}</span>
+                        <span>🚪 Каб. {{ lesson.classroom }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
