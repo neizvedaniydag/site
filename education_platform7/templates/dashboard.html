@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Главная{% endblock %}
+
+{% block content %}
+<h1>Добро пожаловать, {{ current_user.username }}</h1>
+
+{% if current_user.is_admin() %}
+<div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #e94560;">
+    <h2><i class="bi bi-shield-lock"></i> Панель администратора</h2>
+    <p>Вы вошли как администратор платформы.</p>
+    <a href="{{ url_for('admin_panel') }}" class="btn btn-primary">Перейти в админ-панель</a>
+</div>
+{% endif %}
+
+{% if current_user.is_cook() %}
+<div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid #fda085;">
+    <h2><i class="bi bi-egg-fried"></i> Кабинет повара</h2>
+    <p>Проверяйте и одобряйте рецепты пользователей.</p>
+    <a href="{{ url_for('cook_profile') }}" class="btn btn-primary">Перейти в кабинет повара</a>
+</div>
+{% endif %}
+
+{% if current_user.is_student() %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>Всего тестов пройдено</h3>
+        <div class="value">{{ tests|length }}</div>
+    </div>
+    <div class="stat-card">
+        <h3>Тренировок выполнено</h3>
+        <div class="value">{{ pe_results|length }}</div>
+    </div>
+    <div class="stat-card">
+        <h3>Средняя оценка</h3>
+        <div class="value">
+            {% set scores = tests|selectattr('score', 'number')|map(attribute='score')|list %}
+            {% if scores %}
+                {{ (scores|sum / scores|length)|round|int }}%
+            {% else %}
+                -
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Последние тесты</h2>
+    {% if tests %}
+        {% for test in tests %}
+        <div class="list-item">
+            <h4>{{ test.subject }} - {{ test.topic }}</h4>
+            <div class="meta">
+                Оценка: {{ test.score if test.score else 'Не завершен' }}% |
+                {{ test.created_at.strftime('%d.%m.%Y %H:%M') }}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color: var(--text-light);">Тестов пока нет. Начните с создания нового теста.</p>
+    {% endif %}
+</div>
+
+<div class="card" style="margin-top: 1.5rem;">
+    <h2>Результаты тренировок</h2>
+    {% if pe_results %}
+        {% for pe in pe_results %}
+        <div class="list-item">
+            <h4>{{ pe.exercise_type }}</h4>
+            <div class="meta">
+                Повторений: {{ pe.repetitions }} |
+                Оценка: {{ pe.score }}% |
+                {{ pe.created_at.strftime('%d.%m.%Y %H:%M') }}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color: var(--text-light);">Тренировок пока нет.</p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if current_user.is_teacher() %}
+<div class="card">
+    <h2>Панель учителя</h2>
+    <p>Управляйте учениками и следите за их прогрессом.</p>
+    <a href="{{ url_for('teacher_profile') }}" class="btn btn-primary">Панель управления</a>
+    <a href="{{ url_for('teacher_students') }}" class="btn btn-primary" style="margin-left: 0.5rem;">Мои ученики</a>
+</div>
+{% endif %}
+{% endblock %}
