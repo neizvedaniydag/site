@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+{% block title %}Генератор тестов{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tests.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="tests-container">
+    <h1>AI Генератор Тестов</h1>
+    <p style="color: var(--text-light); margin-bottom: 2rem;">
+        Выберите готовую тему или загрузите свой материал
+    </p>
+
+    <!-- Выбор предмета -->
+    <div class="subject-selector">
+        <h2>Выберите предмет</h2>
+        <div class="subjects-grid" id="subjectsGrid">
+            <!-- Кнопки генерируются динамически из JSON -->
+        </div>
+    </div>
+
+    <!-- Темы по выбранному предмету -->
+    <div id="topicsBlock" style="display: none;">
+        <div class="topics-header">
+            <h2>
+                <span id="selectedSubjectIcon"></span>
+                <span id="selectedSubjectName"></span>
+            </h2>
+            <button class="btn btn-secondary btn-sm" onclick="backToSubjects()">← Назад</button>
+        </div>
+        
+        <div class="topics-grid" id="topicsGrid"></div>
+        
+        <!-- Кнопка добавить свой материал -->
+        <div class="custom-topic-btn-wrapper">
+            <button class="btn-custom-topic" onclick="openCustomModal()">
+                <span style="font-size: 2rem;">➕</span>
+                <span style="font-weight: 700; font-size: 1.2rem;">Добавить свой материал</span>
+                <span style="color: #fff; opacity: 0.9; font-size: 0.95rem;">Загрузите текст для создания теста</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- История тестов -->
+    <div class="tests-history">
+        <h2>Мои тесты</h2>
+        
+        {% if tests %}
+        <div class="tests-list">
+            {% for test in tests %}
+            <div class="test-card">
+                <div class="test-info">
+                    <h3>{{ test.subject }}</h3>
+                    <p>{{ test.topic }}</p>
+                    <span class="test-date">{{ test.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                </div>
+                <div class="test-actions">
+                    <a href="{{ url_for('take_test', test_id=test.id) }}" class="btn btn-primary">
+                        Пройти тест
+                    </a>
+                    <button onclick="deleteTest({{ test.id }})" class="btn btn-danger">
+                        Удалить
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="text-align: center; color: var(--text-light); padding: 2rem;">
+            У вас пока нет созданных тестов
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Модальное окно загрузки своего материала -->
+<div id="customModal" class="modal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2>📄 Загрузка своего материала</h2>
+            <button class="modal-close" onclick="closeCustomModal()">×</button>
+        </div>
+        
+        <form id="customTestForm">
+            <div class="form-group">
+                <label>Вставьте текст материала</label>
+                <textarea id="customText" name="custom_text" 
+                          placeholder="Вставьте сюда текст лекции, параграф учебника или любой образовательный материал...
+
+Примеры:
+• Конспект урока
+• Параграф из учебника
+• Статья из Википедии
+• Научная статья
+• Методический материал
+
+Минимум 200 символов для качественного теста."
+                          rows="15" required></textarea>
+                <div class="char-counter">
+                    <span id="charCount">0</span> символов (минимум 200)
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Количество вопросов</label>
+                    <select id="custom_num_questions" name="num_questions">
+                        <option value="5">5 вопросов</option>
+                        <option value="10" selected>10 вопросов</option>
+                        <option value="15">15 вопросов</option>
+                        <option value="20">20 вопросов</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeCustomModal()">
+                    Отмена
+                </button>
+                <button type="submit" class="btn btn-primary btn-large">
+                    <span class="btn-icon">🤖</span>
+                    Сгенерировать тест
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Модальное окно настроек теста -->
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="topicModalTitle"></h2>
+            <button class="modal-close" onclick="closeSettingsModal()">×</button>
+        </div>
+        
+        <form id="standardTestForm">
+            <div class="form-group">
+                <label>Количество вопросов</label>
+                <select id="num_questions" name="num_questions">
+                    <option value="5">5 вопросов</option>
+                    <option value="10" selected>10 вопросов</option>
+                    <option value="15">15 вопросов</option>
+                    <option value="20">20 вопросов</option>
+                </select>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">
+                    Отмена
+                </button>
+                <button type="submit" class="btn btn-primary btn-large">
+                    <span class="btn-icon">✨</span>
+                    Сгенерировать тест
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Модальное окно загрузки -->
+<div id="loadingModal" class="modal-loading" style="display: none;">
+    <div class="loading-content">
+        <div class="spinner-large"></div>
+        <h3>Генерация теста...</h3>
+        <p>AI создает вопросы и подробные пояснения</p>
+    </div>
+</div>
+
+<script>
+// Загружаем темы и иконки с сервера
+let TOPICS = {};
+let ICONS = {};
+let currentSubject = '';
+let currentSubjectIcon = '';
+let selectedTopic = '';
+
+// Загрузка данных при загрузке страницы
+fetch('/api/subjects-topics')
+    .then(response => response.json())
+    .then(data => {
+        Object.keys(data).forEach(subject => {
+            TOPICS[subject] = data[subject].topics;
+            ICONS[subject] = data[subject].icon;
+        });
+        
+        // Генерируем кнопки предметов
+        renderSubjects();
+    })
+    .catch(error => {
+        console.error('Ошибка загрузки тем:', error);
+    });
+
+function renderSubjects() {
+    const grid = document.getElementById('subjectsGrid');
+    grid.innerHTML = '';
+    
+    Object.keys(TOPICS).forEach(subject => {
+        const btn = document.createElement('button');
+        btn.className = 'subject-btn';
+        btn.innerHTML = `
+            <span class="subject-icon">${ICONS[subject]}</span>
+            <span>${subject}</span>
+        `;
+        btn.onclick = () => selectSubject(subject);
+        grid.appendChild(btn);
+    });
+}
+
+function selectSubject(subject) {
+    currentSubject = subject;
+    currentSubjectIcon = ICONS[subject];
+    
+    document.querySelectorAll('.subject-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.closest('.subject-btn').classList.add('active');
+    
+    document.getElementById('selectedSubjectIcon').textContent = currentSubjectIcon;
+    document.getElementById('selectedSubjectName').textContent = subject;
+    
+    const topicsGrid = document.getElementById('topicsGrid');
+    topicsGrid.innerHTML = '';
+    
+    TOPICS[subject].forEach(topic => {
+        const btn = document.createElement('button');
+        btn.className = 'topic-btn';
+        btn.textContent = topic;
+        btn.onclick = () => selectTopic(topic);
+        topicsGrid.appendChild(btn);
+    });
+    
+    document.getElementById('topicsBlock').style.display = 'block';
+    document.getElementById('topicsBlock').scrollIntoView({ behavior: 'smooth' });
+}
+
+function backToSubjects() {
+    document.getElementById('topicsBlock').style.display = 'none';
+    document.querySelectorAll('.subject-btn').forEach(btn => btn.classList.remove('active'));
+}
+
+function selectTopic(topic) {
+    selectedTopic = topic;
+    document.getElementById('topicModalTitle').textContent = currentSubjectIcon + ' ' + topic;
+    document.getElementById('settingsModal').classList.add('active');
+}
+
+function closeSettingsModal() {
+    document.getElementById('settingsModal').classList.remove('active');
+}
+
+function openCustomModal() {
+    document.getElementById('customModal').classList.add('active');
+}
+
+function closeCustomModal() {
+    document.getElementById('customModal').classList.remove('active');
+    document.getElementById('customText').value = '';
+    document.getElementById('charCount').textContent = '0';
+}
+
+// Счетчик символов
+const customText = document.getElementById('customText');
+const charCount = document.getElementById('charCount');
+
+customText.addEventListener('input', function() {
+    const count = this.value.length;
+    charCount.textContent = count;
+    charCount.style.color = count >= 200 ? '#4caf50' : '#ef5350';
+});
+
+// Отправка стандартной формы
+document.getElementById('standardTestForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    closeSettingsModal();
+    
+    const formData = {
+        subject: currentSubject,
+        topic: selectedTopic,
+        num_questions: parseInt(document.getElementById('num_questions').value)
+    };
+    
+    await generateTest(formData);
+});
+
+// Отправка кастомной формы
+document.getElementById('customTestForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const text = document.getElementById('customText').value;
+    
+    if (text.length < 200) {
+        alert('Пожалуйста, введите минимум 200 символов текста для качественного теста');
+        return;
+    }
+    
+    closeCustomModal();
+    
+    const formData = {
+        custom_text: text,
+        num_questions: parseInt(document.getElementById('custom_num_questions').value)
+    };
+    
+    await generateTest(formData);
+});
+
+async function generateTest(data) {
+    document.getElementById('loadingModal').style.display = 'flex';
+    
+    try {
+        const response = await fetch('/api/generate-test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            window.location.href = `/test/${result.test_id}`;
+        } else {
+            alert('Ошибка: ' + result.error);
+        }
+    } catch (error) {
+        alert('Ошибка при генерации теста: ' + error.message);
+    } finally {
+        document.getElementById('loadingModal').style.display = 'none';
+    }
+}
+
+async function deleteTest(testId) {
+    if (!confirm('Вы уверены, что хотите удалить этот тест?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/test/${testId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Ошибка при удалении теста');
+        }
+    } catch (error) {
+        alert('Ошибка: ' + error.message);
+    }
+}
+</script>
+{% endblock %}
