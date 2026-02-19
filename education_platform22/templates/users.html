@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+{% block title %}Пользователи{% endblock %}
+
+{% block extra_css %}
+<style>
+    .users-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    .page-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+
+    .search-wrapper {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+
+    .search-box {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .search-box input {
+        flex: 1;
+        padding: 0.875rem 1.25rem;
+        border: 2px solid #f0f0f0;
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+    }
+
+    .search-box input:focus {
+        outline: none;
+        border-color: #667eea;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .search-box button {
+        padding: 0.875rem 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+
+    .search-box button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .filters-row {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .filter-group label {
+        font-weight: 600;
+        color: #666;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+
+    .filter-group select {
+        padding: 0.5rem 1rem;
+        border: 2px solid #f0f0f0;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        background: #f8f9fa;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        min-width: 150px;
+    }
+
+    .filter-group select:focus {
+        outline: none;
+        border-color: #667eea;
+        background: white;
+    }
+
+    .filter-group select:hover {
+        border-color: #e0e0e0;
+    }
+
+    .users-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1rem;
+    }
+
+    .user-card {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        border: 1px solid #f0f0f0;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .user-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .user-card:hover::before {
+        opacity: 1;
+    }
+
+    .user-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+        border-color: #e0e0e0;
+    }
+
+    .user-avatar {
+        width: 60px;
+        height: 60px;
+        min-width: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        transition: transform 0.3s ease;
+    }
+
+    .user-card:hover .user-avatar {
+        transform: scale(1.1);
+    }
+
+    .user-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .user-info h5 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #333;
+        margin: 0 0 0.25rem 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .user-info .username {
+        color: #666;
+        font-size: 0.85rem;
+        margin: 0;
+    }
+
+    .user-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .user-role {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .role-teacher {
+        background: #f5576c;
+        color: white;
+    }
+
+    .role-student {
+        background: #667eea;
+        color: white;
+    }
+
+    .role-cook {
+        background: #fda085;
+        color: white;
+    }
+
+    .role-admin {
+        background: #1a1a2e;
+        color: white;
+    }
+
+    .user-actions {
+        display: flex;
+        align-items: center;
+    }
+
+    .view-profile-btn {
+        padding: 0.5rem 1rem;
+        background: transparent;
+        color: #667eea;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1.2rem;
+        transition: all 0.3s ease;
+        border: none;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .view-profile-btn:hover {
+        color: #764ba2;
+        transform: translateX(3px);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: #ddd;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state p {
+        color: #999;
+        font-size: 1.1rem;
+    }
+
+    @media (max-width: 768px) {
+        .search-box {
+            flex-direction: row;
+        }
+
+        .search-box input {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .search-box button {
+            width: auto;
+            padding: 0.875rem 1.5rem;
+        }
+
+        .filters-row {
+            flex-direction: column;
+        }
+
+        .filter-group {
+            width: 100%;
+        }
+
+        .filter-group select {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .users-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="users-container">
+    <div class="page-header">
+        <h1><i class="bi bi-people"></i> Пользователи</h1>
+    </div>
+
+    <div class="search-wrapper">
+        <form method="GET" action="{{ url_for('users_list') }}" id="filterForm">
+            <div class="search-box">
+                <input type="text" name="q" placeholder="Поиск по имени, никнейму или email..." value="{{ query }}">
+                <button type="submit"><i class="bi bi-search"></i> Найти</button>
+            </div>
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label><i class="bi bi-funnel"></i> Роль:</label>
+                    <select name="role" onchange="document.getElementById('filterForm').submit()">
+                        <option value="all" {% if role_filter == 'all' %}selected{% endif %}>Все</option>
+                        <option value="student" {% if role_filter == 'student' %}selected{% endif %}>Ученики</option>
+                        <option value="teacher" {% if role_filter == 'teacher' %}selected{% endif %}>Учителя</option>
+                        <option value="cook" {% if role_filter == 'cook' %}selected{% endif %}>Повара</option>
+                        <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>Админы</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label><i class="bi bi-sort-down"></i> Сортировка:</label>
+                    <select name="sort" onchange="document.getElementById('filterForm').submit()">
+                        <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Новые</option>
+                        <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Старые</option>
+                        <option value="name_asc" {% if sort_by == 'name_asc' %}selected{% endif %}>Имя (А-Я)</option>
+                        <option value="name_desc" {% if sort_by == 'name_desc' %}selected{% endif %}>Имя (Я-А)</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    {% if users|length > 0 %}
+    <div class="users-grid">
+        {% for user in users %}
+        <a href="{{ url_for('view_user', user_id=user.id) }}" class="user-card">
+            <div class="user-avatar">
+                <i class="bi bi-person-circle"></i>
+            </div>
+            <div class="user-info">
+                <h5>{{ user.nickname or user.username }}</h5>
+                <p class="username">{{ user.email }}</p>
+                <div class="user-meta">
+                    <span class="user-role {% if user.is_teacher() %}role-teacher{% elif user.is_cook() %}role-cook{% elif user.is_admin() %}role-admin{% else %}role-student{% endif %}">
+                        {% if user.is_teacher() %}
+                            Учитель
+                        {% elif user.is_cook() %}
+                            Повар
+                        {% elif user.is_admin() %}
+                            Админ
+                        {% else %}
+                            Ученик
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            <div class="user-actions">
+                <span class="view-profile-btn">
+                    <i class="bi bi-arrow-right"></i>
+                </span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-search"></i>
+        <p>Пользователей не найдено</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

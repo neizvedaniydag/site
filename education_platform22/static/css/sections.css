@@ -1,0 +1,368 @@
+/* Навигация */
+.navbar {
+    background-color: #ffffff !important;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-bottom: none;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+}
+
+.nav-container {
+    position: relative;
+}
+
+.nav-menu {
+    display: flex;
+    list-style: none;
+    margin: 0 0 0 2rem;
+    padding: 0;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.nav-menu li {
+    position: relative;
+}
+
+.dropdown {
+    position: relative;
+}
+
+.nav-menu li a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #333 !important;
+    text-decoration: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.dropdown-toggle {
+    cursor: pointer;
+}
+
+.dropdown-toggle::after {
+    display: none;
+}
+
+.dropdown::before {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 0.5rem;
+    background: transparent;
+    z-index: 999;
+}
+
+.dropdown-menu {
+    display: block;
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    background: white;
+    min-width: 220px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    border-radius: 10px;
+    padding: 0.5rem 0;
+    margin: 0;
+    list-style: none;
+    z-index: 1000;
+    border: 1px solid #f0f0f0;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
+}
+
+.dropdown:hover .dropdown-menu,
+.dropdown-menu:hover {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-menu li {
+    width: 100%;
+}
+
+.dropdown-menu li a {
+    width: calc(100% - 0.6rem);
+    padding: 0.7rem 1.2rem;
+    border-radius: 8px;
+    border: 1px solid transparent !important;
+    transition: background-color 0.2s ease, transform 0.15s ease !important;
+    margin: 0.1rem 0.3rem;
+    display: block;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.dropdown-menu li a:hover {
+    background-color: #f5f5f5 !important;
+    border: 1px solid transparent !important;
+    color: #333 !important;
+    transform: translateX(3px) !important;
+    box-shadow: none !important;
+}
+
+.nav-menu li a:hover {
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    color: #000 !important;
+}
+
+.nav-menu li a.active {
+    background-color: #f0f0ff;
+    border: 1px solid #667eea;
+    color: #667eea !important;
+}
+
+.logo {
+    color: #333 !important;
+    margin-left: 1rem;
+    font-weight: 700;
+    font-size: 1.3rem;
+    transition: color 0.2s ease;
+    display: block;
+}
+
+.logo:hover {
+    color: #667eea !important;
+}
+
+/* Показ логотипа на больших экранах */
+@media (min-width: 1074px) {
+    .logo {
+        display: block !important;
+    }
+}
+
+/* Бургер-кнопка — скрыта на десктопе */
+.burger-btn {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    z-index: 201;
+}
+
+.burger-btn span {
+    display: block;
+    width: 100%;
+    height: 3px;
+    background: #333;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.burger-btn.active span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 6px);
+}
+
+.burger-btn.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.burger-btn.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(5px, -6px);
+}
+
+/* Оверлей — скрыт на десктопе */
+.nav-overlay {
+    display: none;
+}
+
+/* Карточки */
+.card {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.badge {
+    margin-right: 5px;
+}
+
+.list-group-item {
+    transition: background-color 0.2s;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Стили для раздела обучения */
+.learning-section {
+    margin-bottom: 2rem;
+}
+
+/* Стили для программ тренировок */
+.program-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.program-card .card-body {
+    flex: 1;
+}
+
+/* Стили для дневника питания */
+.meal-entry {
+    border-left: 4px solid #007bff;
+    padding-left: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* Стили для фитнес игр */
+.game-card {
+    height: 100%;
+    background: linear-gradient(to bottom right, #ffffff, #f8f9fa);
+}
+
+.game-card .badge {
+    font-size: 0.8rem;
+}
+
+/* Скрытие логотипа на средних экранах */
+@media (min-width: 769px) and (max-width: 1073px) {
+    .logo {
+        display: none !important;
+    }
+}
+
+/* ===== МОБИЛЬНАЯ АДАПТАЦИЯ ===== */
+@media (max-width: 768px) {
+    .burger-btn {
+        display: flex;
+    }
+
+    .nav-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .logo {
+        margin-left: 0;
+    }
+
+    .nav-menu {
+        display: flex;
+        position: fixed;
+        top: 0;
+        right: -280px;
+        width: 280px;
+        height: 100vh;
+        background: #ffffff;
+        flex-direction: column;
+        padding: 70px 16px 24px;
+        gap: 4px;
+        box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+        transition: right 0.3s ease;
+        z-index: 200;
+        overflow-y: auto;
+        flex-wrap: nowrap;
+        margin: 0;
+    }
+
+    .nav-menu.open {
+        right: 0;
+    }
+
+    .nav-menu li {
+        width: 100%;
+    }
+
+    .nav-menu li a {
+        padding: 12px 16px;
+        font-size: 15px;
+        border-radius: 10px;
+        width: 100%;
+    }
+
+    .nav-menu li a i {
+        font-size: 18px;
+        width: 24px;
+        text-align: center;
+    }
+
+    .dropdown-menu {
+        position: static;
+        display: none;
+        box-shadow: none;
+        background: #f8f9fa;
+        margin: 0.25rem 0 0.5rem 0;
+        padding: 0.25rem 0;
+        border-radius: 8px;
+        opacity: 1;
+        visibility: visible;
+        max-height: none;
+        overflow: visible;
+        transform: none;
+    }
+
+    .dropdown.open .dropdown-menu {
+        display: block;
+    }
+
+    .dropdown-menu li a {
+        padding: 10px 16px 10px 40px;
+        font-size: 14px;
+    }
+
+    .dropdown-toggle .bi-chevron-down {
+        transition: transform 0.3s ease;
+    }
+
+    .dropdown.open .dropdown-toggle .bi-chevron-down {
+        transform: rotate(180deg);
+    }
+
+    .nav-overlay {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 199;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .nav-overlay.open {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    body.menu-open {
+        overflow: hidden;
+    }
+
+    .card:hover {
+        transform: none;
+    }
+}

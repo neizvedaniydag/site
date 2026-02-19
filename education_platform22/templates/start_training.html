@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block title %}Тренировка{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="bi bi-play-circle"></i> {{ program.title }}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="today-workout">
+                        <h3>Сегодняшняя тренировка</h3>
+                        {% if schedule.get(today) %}
+                            <div class="list-group">
+                            {% for exercise in schedule[today] %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5 class="mb-1">{{ exercise.split(' - ')[0] }}</h5>
+                                            <p class="mb-1">{{ exercise.split(' - ')[1] }}</p>
+                                        </div>
+                                        <div class="btn-group">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="startExercise('{{ exercise.split(' - ')[0] }}')">
+                                                <i class="bi bi-camera-video"></i> Начать
+                                            </button>
+                                            <button class="btn btn-outline-success btn-sm exercise-complete" onclick="markComplete(this)">
+                                                <i class="bi bi-check-lg"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="progress mt-2" style="height: 5px;">
+                                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> Сегодня день отдыха
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-4">
+                        <h3>Прогресс тренировки</h3>
+                        <div class="progress">
+                            <div class="progress-bar" role="progressbar" id="overallProgress" style="width: 0%">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно упражнения -->
+<div class="modal fade" id="exerciseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exerciseTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div id="videoContainer" class="ratio ratio-16x9" style="position: relative; background: #000;">
+                            <video id="video" autoplay style="width: 100%; height: 100%; object-fit: cover;"></video>
+                            <div id="feedbackOverlay" style="position: absolute; top: 10px; left: 10px; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 1.2rem; display: none; z-index: 10;"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="exercise-stats">
+                            <h4>AI Тренер</h4>
+                            <div id="aiStatus" class="alert alert-info mb-3">
+                                <i class="bi bi-robot"></i> Искусственный интеллект отслеживает технику упражнений
+                            </div>
+                            <h5>Статистика</h5>
+                            <p><i class="bi bi-check-circle text-success"></i> Правильных: <span id="correctCount" class="fw-bold">0</span></p>
+                            <p><i class="bi bi-x-circle text-danger"></i> Неправильных: <span id="incorrectCount" class="fw-bold">0</span></p>
+                            <div class="progress mb-3" style="height: 25px;">
+                                <div class="progress-bar bg-success" id="exerciseProgress" role="progressbar" style="width: 0%; font-size: 14px; line-height: 25px;">0%</div>
+                            </div>
+                        </div>
+                        <div class="exercise-controls">
+                            <button class="btn btn-danger w-100 mb-2" onclick="stopExercise()">
+                                <i class="bi bi-stop-circle"></i> Закончить упражнение
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script>
+let currentExercise = null;
+let videoStream = null;
+let pose = null;
+let camera = null;
+let canvas, ctx;
+let correctCount = 0;
+let incorrectCount = 0;
+let exerciseState = 'up';
+let isAILoaded = false;
+
+function updateOverallProgress() {
+    const total = document.querySelectorAll('.exercise-complete').length;
+    const completed = document.querySelectorAll('.exercise-complete.btn-success').length;
+    const progress = (completed / total) * 100;
+    document.getElementById('overallProgress').style.width = progress + '%';
+    document.getElementById('overallProgress').textContent = Math.round(progress) + '%';
+}
+
+function markComplete(button) {
+    button.classList.toggle('btn-outline-success');
+    button.classList.toggle('btn-success');
+    updateOverallProgress();
+}
+
+function showFeedback(isCorrect) {
+    const overlay = document.getElementById('feedbackOverlay');
+    if (isCorrect) {
+        overlay.style.background = 'rgba(40, 167, 69, 0.9)';
+        overlay.style.color = 'white';
+        overlay.innerHTML = '<i class="bi bi-check-circle"></i> Отлично!';
+    } else {
+        overlay.style.background = 'rgba(220, 53, 69, 0.9)';
+        overlay.style.color = 'white';
+        overlay.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Проверьте технику';
+    }
+    overlay.style.display = 'block';
+    setTimeout(() => {
+        overlay.style.display = 'none';
+    }, 1000);
+}
+
+function calculateAngle(a, b, c) {
+    const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+    let angle = Math.abs(radians * 180.0 / Math.PI);
+    if (angle > 180.0) angle = 360 - angle;
+    return angle;
+}
+
+function analyzeSquat(landmarks) {
+    const leftHip = landmarks[23];
+    const leftKnee = landmarks[25];
+    const leftAnkle = landmarks[27];
+
+    if (!leftHip || !leftKnee || !leftAnkle) return null;
+
+    const angle = calculateAngle(
+        {x: leftHip.x, y: leftHip.y},
+        {x: leftKnee.x, y: leftKnee.y},
+        {x: leftAnkle.x, y: leftAnkle.y}
+    );
+
+    if (angle < 100 && exerciseState === 'up') {
+        exerciseState = 'down';
+        return { phase: 'down', correct: angle > 70 && angle < 110 };
+    } else if (angle > 160 && exerciseState === 'down') {
+        exerciseState = 'up';
+        return { phase: 'up', correct: true };
+    }
+
+    return null;
+}
+
+function analyzePushup(landmarks) {
+    const leftShoulder = landmarks[11];
+    const leftElbow = landmarks[13];
+    const leftWrist = landmarks[15];
+
+    if (!leftShoulder || !leftElbow || !leftWrist) return null;
+
+    const angle = calculateAngle(
+        {x: leftShoulder.x, y: leftShoulder.y},
+        {x: leftElbow.x, y: leftElbow.y},
+        {x: leftWrist.x, y: leftWrist.y}
+    );
+
+    if (angle < 100 && exerciseState === 'up') {
+        exerciseState = 'down';
+        return { phase: 'down', correct: angle > 70 && angle < 110 };
+    } else if (angle > 160 && exerciseState === 'down') {
+        exerciseState = 'up';
+        return { phase: 'up', correct: true };
+    }
+
+    return null;
+}
+
+function onResults(results) {
+    if (!canvas || !ctx) return;
+
+    ctx.save();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+
+    if (results.poseLandmarks) {
+        drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 4});
+        drawLandmarks(ctx, results.poseLandmarks, {color: '#FF0000', lineWidth: 2});
+
+        let result = null;
+        const exerciseLower = currentExercise.toLowerCase();
+
+        if (exerciseLower.includes('присед') || exerciseLower.includes('squat')) {
+            result = analyzeSquat(results.poseLandmarks);
+        } else if (exerciseLower.includes('отжим') || exerciseLower.includes('pushup') || exerciseLower.includes('push-up')) {
+            result = analyzePushup(results.poseLandmarks);
+        }
+
+        if (result && result.phase === 'up') {
+            if (result.correct) {
+                correctCount++;
+                document.getElementById('correctCount').textContent = correctCount;
+                showFeedback(true);
+            } else {
+                incorrectCount++;
+                document.getElementById('incorrectCount').textContent = incorrectCount;
+                showFeedback(false);
+            }
+            updateExerciseProgress();
+        }
+    }
+
+    ctx.restore();
+}
+
+function updateExerciseProgress() {
+    const total = correctCount + incorrectCount;
+    const progress = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+    document.getElementById('exerciseProgress').style.width = progress + '%';
+    document.getElementById('exerciseProgress').textContent = progress + '%';
+}
+
+async function startExercise(exerciseName) {
+    currentExercise = exerciseName;
+    correctCount = 0;
+    incorrectCount = 0;
+    exerciseState = 'up';
+
+    document.getElementById('exerciseTitle').textContent = exerciseName;
+    document.getElementById('correctCount').textContent = '0';
+    document.getElementById('incorrectCount').textContent = '0';
+    document.getElementById('exerciseProgress').style.width = '0%';
+    document.getElementById('exerciseProgress').textContent = '0%';
+
+    const exerciseModal = new bootstrap.Modal(document.getElementById('exerciseModal'));
+    exerciseModal.show();
+
+    const aiStatus = document.getElementById('aiStatus');
+    aiStatus.className = 'alert alert-warning mb-3';
+    aiStatus.innerHTML = '<i class="bi bi-hourglass-split"></i> Загрузка AI...';
+
+    const video = document.getElementById('video');
+    const videoContainer = document.getElementById('videoContainer');
+
+    if (!canvas) {
+        canvas = document.createElement('canvas');
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        videoContainer.appendChild(canvas);
+        ctx = canvas.getContext('2d');
+    }
+
+    if (!pose) {
+        pose = new Pose({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+        });
+
+        pose.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            enableSegmentation: false,
+            smoothSegmentation: false,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        pose.onResults(onResults);
+    }
+
+    if (!camera) {
+        camera = new Camera(video, {
+            onFrame: async () => {
+                await pose.send({image: video});
+            },
+            width: 640,
+            height: 480
+        });
+    }
+
+    await camera.start();
+
+    aiStatus.className = 'alert alert-success mb-3';
+    aiStatus.innerHTML = '<i class="bi bi-check-circle"></i> AI активен - отслеживаю технику';
+
+    document.getElementById('exerciseModal').addEventListener('hidden.bs.modal', stopExercise, { once: true });
+}
+
+function stopExercise() {
+    if (camera) {
+        camera.stop();
+    }
+
+    if (canvas && ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    fetch('/api/save-pe-result', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            exercise_type: currentExercise,
+            correct_count: correctCount,
+            incorrect_count: incorrectCount,
+            score: Math.round((correctCount / (correctCount + incorrectCount)) * 100) || 0
+        })
+    });
+}
+</script>
+{% endblock %}

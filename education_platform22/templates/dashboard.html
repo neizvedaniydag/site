@@ -1,0 +1,685 @@
+{% extends "base.html" %}
+{% block title %}Главная{% endblock %}
+
+{% block extra_css %}
+<style>
+.dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.welcome-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+}
+
+.welcome-content {
+    position: relative;
+    z-index: 2;
+}
+
+.welcome-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    padding: 0.5rem 1.25rem;
+    border-radius: 20px;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.welcome-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: white;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.2;
+}
+
+.welcome-title span {
+    background: linear-gradient(to right, #fff, rgba(255,255,255,0.8));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.welcome-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.welcome-decoration {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.decoration-circle {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.circle-1 {
+    width: 300px;
+    height: 300px;
+    top: -100px;
+    right: -50px;
+}
+
+.circle-2 {
+    width: 200px;
+    height: 200px;
+    top: 50px;
+    right: 100px;
+}
+
+.circle-3 {
+    width: 150px;
+    height: 150px;
+    bottom: -50px;
+    right: 200px;
+}
+
+@media (max-width: 768px) {
+    .welcome-section {
+        padding: 2rem 1.5rem;
+    }
+
+    .welcome-title {
+        font-size: 1.75rem;
+    }
+
+    .welcome-subtitle {
+        font-size: 1rem;
+    }
+
+    .decoration-circle {
+        display: none;
+    }
+}
+
+.role-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition: all 0.3s ease;
+    border: 1px solid #f0f0f0;
+}
+
+.role-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.role-icon {
+    width: 80px;
+    height: 80px;
+    min-width: 80px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: white;
+}
+
+.admin-card .role-icon {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+.cook-card .role-icon {
+    background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+}
+
+.role-content {
+    flex: 1;
+}
+
+.role-content h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 0.5rem 0;
+}
+
+.role-content p {
+    color: #666;
+    margin: 0;
+    font-size: 1rem;
+}
+
+.role-btn {
+    padding: 0.875rem 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.role-btn:hover {
+    transform: translateX(3px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .role-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .role-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+.dashboard-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    border-left: 4px solid #4361ee;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.dashboard-card.incomplete {
+    border-left-color: #f59e0b;
+    background: linear-gradient(to right, #fffbeb 0%, #ffffff 100%);
+}
+
+.dashboard-card.completed {
+    border-left-color: #10b981;
+}
+
+.dashboard-card h5 {
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+    color: var(--text);
+}
+
+.dashboard-card .meta {
+    font-size: 0.875rem;
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dashboard-card .badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    margin-top: 2rem;
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-light);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dashboard-card {
+    animation: fadeInUp 0.5s ease;
+}
+
+.dashboard-card:nth-child(1) { animation-delay: 0.1s; }
+.dashboard-card:nth-child(2) { animation-delay: 0.2s; }
+.dashboard-card:nth-child(3) { animation-delay: 0.3s; }
+.dashboard-card:nth-child(4) { animation-delay: 0.4s; }
+.dashboard-card:nth-child(5) { animation-delay: 0.5s; }
+
+.stats-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.stats-modal-overlay.show {
+    opacity: 1;
+}
+
+.stats-modal {
+    background: white;
+    border-radius: 20px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+.stats-modal-overlay.show .stats-modal {
+    transform: scale(1);
+}
+
+.stats-modal-header {
+    padding: 2rem 2rem 1rem;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.stats-modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #333;
+}
+
+.stats-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #999;
+    transition: color 0.2s ease;
+    padding: 0.5rem;
+    line-height: 1;
+}
+
+.stats-modal-close:hover {
+    color: #333;
+}
+
+.stats-modal-body {
+    padding: 2rem;
+}
+
+.stats-modal-body p {
+    color: #666;
+    margin-bottom: 1.5rem;
+}
+
+.stats-modal-actions {
+    display: grid;
+    gap: 1rem;
+}
+
+.stats-modal-btn {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.stats-modal-btn:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    color: white;
+}
+
+.stats-modal-btn i {
+    font-size: 1.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="welcome-section">
+        <div class="welcome-content">
+            <div class="welcome-badge">
+                {% if current_user.is_admin() %}
+                    <i class="bi bi-shield-lock"></i> Администратор
+                {% elif current_user.is_cook() %}
+                    <i class="bi bi-egg-fried"></i> Повар
+                {% elif current_user.is_teacher() %}
+                    <i class="bi bi-briefcase"></i> Учитель
+                {% else %}
+                    <i class="bi bi-mortarboard"></i> Ученик
+                {% endif %}
+            </div>
+            <h1 class="welcome-title">Добро пожаловать, <span>{{ current_user.nickname or current_user.username }}</span></h1>
+            <p class="welcome-subtitle">{{ current_user.email }}</p>
+        </div>
+        <div class="welcome-decoration">
+            <div class="decoration-circle circle-1"></div>
+            <div class="decoration-circle circle-2"></div>
+            <div class="decoration-circle circle-3"></div>
+        </div>
+    </div>
+
+{% if current_user.is_admin() %}
+<div class="role-card admin-card">
+    <div class="role-icon">
+        <i class="bi bi-shield-lock"></i>
+    </div>
+    <div class="role-content">
+        <h2>Панель администратора</h2>
+        <p>Управление пользователями, контроль системы и аналитика</p>
+    </div>
+    <a href="{{ url_for('admin_panel') }}" class="role-btn">
+        Перейти <i class="bi bi-arrow-right"></i>
+    </a>
+</div>
+{% endif %}
+
+{% if current_user.is_cook() %}
+<div class="role-card cook-card">
+    <div class="role-icon">
+        <i class="bi bi-egg-fried"></i>
+    </div>
+    <div class="role-content">
+        <h2>Кабинет повара</h2>
+        <p>Проверка и одобрение рецептов пользователей</p>
+    </div>
+    <a href="{{ url_for('cook_profile') }}" class="role-btn">
+        Перейти <i class="bi bi-arrow-right"></i>
+    </a>
+</div>
+{% endif %}
+
+{% if current_user.is_student() %}
+<div class="stats-grid">
+    <div class="stat-card stat-card-tests" onclick="showStatsModal('tests')">
+        <div class="stat-icon">
+            <i class="bi bi-file-text"></i>
+        </div>
+        <div class="stat-content">
+            <div class="value">{{ completed_tests|length }}</div>
+            <h3>Тесты пройдено</h3>
+        </div>
+        <div class="stat-arrow">
+            <i class="bi bi-arrow-right"></i>
+        </div>
+    </div>
+    <div class="stat-card stat-card-training" onclick="showStatsModal('training')">
+        <div class="stat-icon">
+            <i class="bi bi-lightning-fill"></i>
+        </div>
+        <div class="stat-content">
+            <div class="value">{{ completed_pe|length }}</div>
+            <h3>Тренировок выполнено</h3>
+        </div>
+        <div class="stat-arrow">
+            <i class="bi bi-arrow-right"></i>
+        </div>
+    </div>
+    <div class="stat-card stat-card-score" onclick="showStatsModal('score')">
+        <div class="stat-icon">
+            <i class="bi bi-trophy-fill"></i>
+        </div>
+        <div class="stat-content">
+            <div class="value">
+                {% set scores = completed_tests|map(attribute='score')|list %}
+                {% if scores %}
+                    {{ (scores|sum / scores|length)|round|int }}%
+                {% else %}
+                    -
+                {% endif %}
+            </div>
+            <h3>Средняя оценка</h3>
+        </div>
+        <div class="stat-arrow">
+            <i class="bi bi-arrow-right"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Незавершенные тесты -->
+{% if incomplete_tests %}
+<div class="section-header">
+    <h2><i class="bi bi-clock-history"></i> Незавершенные тесты</h2>
+</div>
+<div class="row">
+    {% for test in incomplete_tests %}
+    <div class="col-md-6 mb-3">
+        <div class="dashboard-card incomplete" onclick="continueTest({{ test.id }})">
+            <h5><i class="bi bi-file-text"></i> {{ test.subject }} - {{ test.topic }}</h5>
+            <div class="meta">
+                <span class="badge badge-warning">Не завершен</span>
+                <span>{{ test.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Незавершенные тренировки -->
+{% if incomplete_pe %}
+<div class="section-header">
+    <h2><i class="bi bi-clock-history"></i> Незавершенные тренировки</h2>
+</div>
+<div class="row">
+    {% for pe in incomplete_pe %}
+    <div class="col-md-6 mb-3">
+        <div class="dashboard-card incomplete" onclick="continuePE({{ pe.id }})">
+            <h5><i class="bi bi-lightning"></i> {{ pe.exercise_type }}</h5>
+            <div class="meta">
+                <span class="badge badge-warning">Не завершена</span>
+                <span>{{ pe.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Завершенные тесты -->
+{% if completed_tests %}
+<div class="section-header">
+    <h2><i class="bi bi-check-circle"></i> Последние тесты</h2>
+</div>
+<div class="row">
+    {% for test in completed_tests %}
+    <div class="col-md-6 mb-3">
+        <div class="dashboard-card completed">
+            <h5><i class="bi bi-file-text"></i> {{ test.subject }} - {{ test.topic }}</h5>
+            <div class="meta">
+                <span class="badge badge-success">{{ test.score }}%</span>
+                <span>{{ test.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Завершенные тренировки -->
+{% if completed_pe %}
+<div class="section-header">
+    <h2><i class="bi bi-check-circle"></i> Последние тренировки</h2>
+</div>
+<div class="row">
+    {% for pe in completed_pe %}
+    <div class="col-md-6 mb-3">
+        <div class="dashboard-card completed">
+            <h5><i class="bi bi-lightning"></i> {{ pe.exercise_type }}</h5>
+            <div class="meta">
+                <span class="badge badge-success">{{ pe.score }}%</span>
+                <span>Повторений: {{ pe.repetitions }}</span>
+                <span>{{ pe.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if not incomplete_tests and not incomplete_pe and not completed_tests and not completed_pe %}
+<div class="empty-state">
+    <i class="bi bi-inbox"></i>
+    <p>Пока нет активности. Начните с создания теста или тренировки!</p>
+</div>
+{% endif %}
+
+{% endif %}
+
+{% if current_user.is_teacher() %}
+<div class="card">
+    <h2>Панель учителя</h2>
+    <p>Управляйте учениками и следите за их прогрессом.</p>
+    <a href="{{ url_for('teacher_profile') }}" class="btn btn-primary">Панель управления</a>
+    <a href="{{ url_for('teacher_students') }}" class="btn btn-primary" style="margin-left: 0.5rem;">Мои ученики</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function continueTest(testId) {
+    window.location.href = `/test/${testId}/continue`;
+}
+
+function continuePE(peId) {
+    window.location.href = `/pe/${peId}/continue`;
+}
+
+function showStatsModal(type) {
+    const modals = {
+        'tests': {
+            title: 'Тесты',
+            description: 'Просмотр всех пройденных тестов и создание новых',
+            actions: [
+                { text: 'Мои тесты', url: '{{ url_for("tests") }}', icon: 'bi-list-check' },
+                { text: 'Создать тест', url: '{{ url_for("tests") }}', icon: 'bi-plus-circle' }
+            ]
+        },
+        'training': {
+            title: 'Тренировки',
+            description: 'Физические упражнения и программы тренировок',
+            actions: [
+                { text: 'Физкультура', url: '{{ url_for("physical_education") }}', icon: 'bi-lightning' },
+                { text: 'Программы тренировок', url: '{{ url_for("training_programs") }}', icon: 'bi-calendar-check' }
+            ]
+        },
+        'score': {
+            title: 'Статистика',
+            description: 'Подробная информация о вашем прогрессе',
+            actions: [
+                { text: 'Мой профиль', url: '{{ url_for("student_profile") }}', icon: 'bi-person-circle' },
+                { text: 'Все результаты', url: '{{ url_for("tests") }}', icon: 'bi-bar-chart' }
+            ]
+        }
+    };
+
+    const modal = modals[type];
+    if (!modal) return;
+
+    const modalHTML = `
+        <div class="stats-modal-overlay" onclick="closeStatsModal()">
+            <div class="stats-modal" onclick="event.stopPropagation()">
+                <div class="stats-modal-header">
+                    <h2>${modal.title}</h2>
+                    <button class="stats-modal-close" onclick="closeStatsModal()">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="stats-modal-body">
+                    <p>${modal.description}</p>
+                    <div class="stats-modal-actions">
+                        ${modal.actions.map(action => `
+                            <a href="${action.url}" class="stats-modal-btn">
+                                <i class="${action.icon}"></i>
+                                <span>${action.text}</span>
+                            </a>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    setTimeout(() => {
+        document.querySelector('.stats-modal-overlay').classList.add('show');
+    }, 10);
+}
+
+function closeStatsModal() {
+    const overlay = document.querySelector('.stats-modal-overlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+        setTimeout(() => overlay.remove(), 300);
+    }
+}
+</script>
+{% endblock %}
