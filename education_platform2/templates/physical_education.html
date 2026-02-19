@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Физкультура{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pe.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="pe-fullscreen" id="peContainer">
+    <div class="video-fullscreen">
+        <video id="webcam" autoplay playsinline muted webkit-playsinline></video>
+        <canvas id="canvas"></canvas>
+        
+        <div class="ai-indicator" id="aiIndicator" style="display: none;">
+            <div class="ai-dot"></div>
+            <span>AI активен</span>
+        </div>
+        
+        <div class="hints-overlay" id="hintsOverlay"></div>
+        
+        <div class="overlay-controls" id="overlayControls" style="display: none;">
+            <div class="top-bar">
+                <select id="exerciseSelect" class="exercise-selector">
+                    <option value="squat">Приседания</option>
+                    <option value="pushup">Отжимания</option>
+                    <option value="situp">Пресс</option>
+                    <option value="plank">Планка</option>
+                    <option value="mountain">Альпинист</option>
+                    <option value="neck">Повороты шеи</option>
+                </select>
+                
+                <div class="top-controls">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="hintsToggle" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Подсказки</span>
+                    </label>
+                    <button id="closeBtn" class="close-btn">✕</button>
+                </div>
+            </div>
+            
+            <div class="stats-overlay">
+                <div class="stat-item-overlay">
+                    <div class="stat-number" id="reps">0</div>
+                    <div class="stat-name">Повторений</div>
+                </div>
+                <div class="stat-item-overlay">
+                    <div class="stat-number" style="color: #10b981;" id="correct">0</div>
+                    <div class="stat-name">Правильно</div>
+                </div>
+                <div class="stat-item-overlay">
+                    <div class="stat-number" style="color: #ef4444;" id="incorrect">0</div>
+                    <div class="stat-name">Ошибок</div>
+                </div>
+            </div>
+            
+            <div class="status-overlay">
+                <span id="status">Готов</span>
+            </div>
+            
+            <div id="countdown" class="countdown-overlay"></div>
+            
+            <div class="bottom-bar">
+                <div class="record-button-container">
+                    <button id="recordBtn" class="record-btn" disabled>
+                        <div class="record-btn-inner"></div>
+                    </button>
+                    <div class="record-label" id="recordLabel">Загрузка...</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="welcome-screen" id="welcomeScreen">
+            <div class="welcome-content">
+                <h1>AI Тренер</h1>
+                <p>Искусственный интеллект отслеживает технику упражнений</p>
+                <div id="loadingText" style="color: white; margin: 20px 0;">Загрузка AI...</div>
+                <div class="spinner"></div>
+                <button id="startCamBtn" class="start-camera-btn" style="display: none;">Включить камеру</button>
+            </div>
+        </div>
+        
+        <div class="instructions-screen" id="instructionsScreen" style="display: none;">
+            <div class="instructions-content">
+                <h2 id="instructionTitle">Упражнение</h2>
+                <div id="instructionText"></div>
+                <button id="startExerciseBtn" class="start-camera-btn">Начать</button>
+            </div>
+        </div>
+        
+        <div class="results-overlay" id="resultsOverlay" style="display: none;">
+            <div class="results-content">
+                <h2>Результаты</h2>
+                <div id="resultsText"></div>
+                <div id="errorReport"></div>
+                <div class="results-buttons">
+                    <button onclick="restartExercise()" class="btn-result">Еще раз</button>
+                    <button onclick="location.href='{{ url_for('dashboard') }}'" class="btn-result secondary">На главную</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="importmap">
+{
+  "imports": {
+    "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs"
+  }
+}
+</script>
+<script type="module" src="{{ url_for('static', filename='js/pe.js') }}"></script>
+{% endblock %}
