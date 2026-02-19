@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Тренировка{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="bi bi-play-circle"></i> {{ program.title }}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="today-workout">
+                        <h3>Сегодняшняя тренировка</h3>
+                        {% if schedule.get(today) %}
+                            <div class="list-group">
+                            {% for exercise in schedule[today] %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5 class="mb-1">{{ exercise.split(' - ')[0] }}</h5>
+                                            <p class="mb-1">{{ exercise.split(' - ')[1] }}</p>
+                                        </div>
+                                        <div class="btn-group">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="startExercise('{{ exercise.split(' - ')[0] }}')">
+                                                <i class="bi bi-camera-video"></i> Начать
+                                            </button>
+                                            <button class="btn btn-outline-success btn-sm exercise-complete" onclick="markComplete(this)">
+                                                <i class="bi bi-check-lg"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="progress mt-2" style="height: 5px;">
+                                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> Сегодня день отдыха
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-4">
+                        <h3>Прогресс тренировки</h3>
+                        <div class="progress">
+                            <div class="progress-bar" role="progressbar" id="overallProgress" style="width: 0%">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно упражнения -->
+<div class="modal fade" id="exerciseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exerciseTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div id="videoContainer" class="ratio ratio-16x9">
+                            <video id="video" autoplay></video>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="exercise-stats">
+                            <h4>Статистика</h4>
+                            <p>Правильных повторений: <span id="correctCount">0</span></p>
+                            <p>Неправильных повторений: <span id="incorrectCount">0</span></p>
+                            <div class="progress mb-3">
+                                <div class="progress-bar bg-success" id="exerciseProgress" role="progressbar" style="width: 0%">0%</div>
+                            </div>
+                        </div>
+                        <div class="exercise-controls">
+                            <button class="btn btn-danger btn-block mb-2" onclick="stopExercise()">
+                                <i class="bi bi-stop-circle"></i> Закончить
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let currentExercise = null;
+let videoStream = null;
+
+function updateOverallProgress() {
+    const total = document.querySelectorAll('.exercise-complete').length;
+    const completed = document.querySelectorAll('.exercise-complete.btn-success').length;
+    const progress = (completed / total) * 100;
+    document.getElementById('overallProgress').style.width = progress + '%';
+    document.getElementById('overallProgress').textContent = Math.round(progress) + '%';
+}
+
+function markComplete(button) {
+    button.classList.toggle('btn-outline-success');
+    button.classList.toggle('btn-success');
+    updateOverallProgress();
+}
+
+async function startExercise(exerciseName) {
+    currentExercise = exerciseName;
+    document.getElementById('exerciseTitle').textContent = exerciseName;
+    
+    try {
+        videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const video = document.getElementById('video');
+        video.srcObject = videoStream;
+        
+        const exerciseModal = new bootstrap.Modal(document.getElementById('exerciseModal'));
+        exerciseModal.show();
+        
+        document.getElementById('exerciseModal').addEventListener('hidden.bs.modal', stopExercise);
+    } catch (err) {
+        console.error('Error accessing camera:', err);
+        alert('Не удалось получить доступ к камере');
+    }
+}
+
+function stopExercise() {
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+    }
+    
+    // Отправка результатов на сервер
+    const correctCount = parseInt(document.getElementById('correctCount').textContent);
+    const incorrectCount = parseInt(document.getElementById('incorrectCount').textContent);
+    
+    fetch('/api/save-pe-result', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            exercise_type: currentExercise,
+            correct_count: correctCount,
+            incorrect_count: incorrectCount,
+            score: Math.round((correctCount / (correctCount + incorrectCount)) * 100) || 0
+        })
+    });
+}
+
+// Обновление прогресса упражнения (пример)
+setInterval(() => {
+    if (currentExercise) {
+        const correct = parseInt(document.getElementById('correctCount').textContent);
+        const incorrect = parseInt(document.getElementById('incorrectCount').textContent);
+        const progress = Math.round((correct / (correct + incorrect + 10)) * 100);
+        document.getElementById('exerciseProgress').style.width = progress + '%';
+        document.getElementById('exerciseProgress').textContent = progress + '%';
+    }
+}, 1000);
+</script>
+{% endblock %}
