@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    overflow: hidden;
+}
+
+.container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+}
+
+.auth-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem 1rem;
+    margin: 0;
+    overflow-y: auto;
+    z-index: 9999;
+}
+
+.auth-box {
+    background: white;
+    border-radius: 20px;
+    padding: 3rem 2.5rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 480px;
+    animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.auth-box h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #667eea;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: #f9fafb;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-group small {
+    display: block;
+    margin-top: 0.5rem;
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+
+.checkbox-group {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 10px;
+    border: 2px solid #e5e7eb;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    cursor: pointer;
+    margin-bottom: 1rem;
+}
+
+.checkbox-label:last-child {
+    margin-bottom: 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-top: 0.15rem;
+    cursor: pointer;
+    accent-color: #667eea;
+}
+
+.checkbox-label span {
+    font-size: 0.9rem;
+    color: #4b5563;
+    line-height: 1.5;
+}
+
+.checkbox-label a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.checkbox-label a:hover {
+    color: #764ba2;
+    text-decoration: underline;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 1rem;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 2rem;
+    color: #6b7280;
+    font-size: 0.95rem;
+}
+
+.auth-footer a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.auth-footer a:hover {
+    color: #764ba2;
+    text-decoration: underline;
+}
+
+#roleHint {
+    padding: 0.75rem;
+    background: #eff6ff;
+    border-left: 3px solid #667eea;
+    border-radius: 5px;
+    margin-top: 0.75rem;
+    color: #1e40af;
+}
+
+@media (max-width: 640px) {
+    .auth-box {
+        padding: 2rem 1.5rem;
+    }
+
+    .auth-box h1 {
+        font-size: 1.5rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
+        <h1>✨ Регистрация</h1>
+        <form method="POST" action="{{ url_for('register') }}">
+            <div class="form-group">
+                <label for="username">Имя пользователя</label>
+                <input type="text" id="username" name="username" placeholder="Введите ваше имя" required>
+            </div>
+
+            <div class="form-group">
+                <label for="nickname">Никнейм</label>
+                <input type="text" id="nickname" name="nickname" placeholder="Уникальный никнейм" required>
+                <small>По этому никнейму вас смогут найти другие пользователи</small>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="example@mail.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Пароль</label>
+                <input type="password" id="password" name="password" placeholder="Минимум 6 символов" required minlength="6">
+            </div>
+
+            <div class="form-group">
+                <label for="role">Роль</label>
+                <select id="role" name="role" required>
+                    <option value="student" selected>Ученик</option>
+                    <option value="teacher">Учитель</option>
+                    <option value="cook">Повар</option>
+                </select>
+                <small id="roleHint">Выберите вашу роль.</small>
+            </div>
+
+            <div class="checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="privacy_policy" required>
+                    <span>
+                        Я согласен с <a href="{{ url_for('privacy_policy') }}" target="_blank">политикой конфиденциальности</a>
+                    </span>
+                </label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" name="data_processing" required>
+                    <span>
+                        Я согласен на <a href="{{ url_for('personal_data_agreement') }}" target="_blank">обработку персональных данных</a>
+                    </span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn-primary">Зарегистрироваться</button>
+        </form>
+
+        <p class="auth-footer">
+            Уже есть аккаунт? <a href="{{ url_for('login') }}">Войти</a>
+        </p>
+    </div>
+</div>
+
+<script>
+document.getElementById('role').addEventListener('change', function() {
+    const hint = document.getElementById('roleHint');
+    const hints = {
+        'student': 'Ученик получает доступ к тестам, тренировкам, питанию и играм.',
+        'teacher': 'Учитель может управлять учениками и следить за их прогрессом. Требуется одобрение администратора.',
+        'cook': 'Повар проверяет и одобряет рецепты пользователей. Требуется одобрение администратора.'
+    };
+    hint.textContent = hints[this.value] || '';
+});
+</script>
+{% endblock %}

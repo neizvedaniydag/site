@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+{% block title %}{{ test.subject }}: {{ test.topic }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/test.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="test-wrapper">
+    <!-- Боковая панель с навигацией -->
+    <div class="test-sidebar">
+        <div class="test-info">
+            <h3>{{ test.subject }}</h3>
+            <p>{{ test.topic }}</p>
+            <div class="progress-info">
+                <span id="answeredCount">0</span> из {{ test_data.questions|length }}
+            </div>
+        </div>
+        
+        <div class="questions-nav">
+            {% for i in range(test_data.questions|length) %}
+            <button class="question-nav-btn" data-question="{{ i }}" onclick="goToQuestion({{ i }})">
+                <span class="q-number">{{ i + 1 }}</span>
+                <span class="q-status" id="status-{{ i }}">○</span>
+            </button>
+            {% endfor %}
+        </div>
+        
+        <button class="btn btn-primary btn-finish" onclick="showReviewModal()" style="width: 100%; margin-top: auto;">
+            Завершить тест
+        </button>
+    </div>
+
+    <!-- Основная область с вопросами -->
+    <div class="test-main">
+        {% for question in test_data.questions %}
+        {% set i = loop.index0 %}
+        <div class="question-slide" id="question-{{ i }}" style="display: {{ 'block' if i == 0 else 'none' }}">
+            <div class="question-header">
+                <span class="question-num">Вопрос {{ i + 1 }} из {{ test_data.questions|length }}</span>
+            </div>
+            
+            <div class="question-content">
+                <h2 class="math-content">{{ question.question }}</h2>
+                
+                <div class="options-list">
+                    {% for option in question.options %}
+                    {% set j = loop.index0 %}
+                    <label class="option-card">
+                        <input type="radio" name="question_{{ i }}" value="{{ j }}" onchange="markAnswered({{ i }})">
+                        <div class="option-content">
+                            <span class="option-letter">{{ 'АБВГ'[j] }}</span>
+                            <span class="option-text math-content">{{ option }}</span>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="question-footer">
+                <button class="btn btn-secondary" onclick="prevQuestion()" {% if i == 0 %}disabled{% endif %}>
+                    ← Назад
+                </button>
+                <button class="btn btn-primary" onclick="nextQuestion()">
+                    {% if i == test_data.questions|length - 1 %}
+                    Завершить →
+                    {% else %}
+                    Далее →
+                    {% endif %}
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Модальное окно проверки -->
+<div id="reviewModal" class="modal">
+    <div class="modal-content">
+        <h2>Проверьте свои ответы</h2>
+        <p style="margin-bottom: 20px;">Убедитесь, что ответили на все вопросы перед отправкой</p>
+        <div class="review-grid" id="reviewGrid"></div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeReviewModal()">Вернуться к тесту</button>
+            <button class="btn btn-primary" onclick="confirmSubmit()">Отправить тест</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно подтверждения -->
+<div id="confirmModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <h2>Подтвердите отправку</h2>
+        <p style="font-size: 1.1rem;">Вы уверены, что хотите отправить тест? После отправки изменить ответы будет невозможно.</p>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeConfirmModal()">Отмена</button>
+            <button class="btn btn-primary" onclick="submitTest()">Да, отправить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Результаты -->
+<div id="resultModal" class="modal">
+    <div class="modal-content modal-result">
+        <h2>Результаты теста</h2>
+        <div class="score-display">
+            <div class="score-circle">
+                <span id="scoreValue">0%</span>
+            </div>
+            <p id="resultText" style="font-size: 1.2rem;"></p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="location.href='{{ url_for('tests') }}'">Создать новый тест</button>
+            <button class="btn btn-primary" onclick="showDetailedResults()">Посмотреть ответы</button>
+        </div>
+    </div>
+</div>
+
+<!-- Детальные результаты -->
+<div id="detailedResults" style="display: none;">
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+            <h1 style="margin: 0;">Детальные результаты</h1>
+            <button class="btn btn-secondary" onclick="location.href='{{ url_for('dashboard') }}'">На главную</button>
+        </div>
+        
+        <div class="results-summary">
+            <div class="summary-item">
+                <span class="summary-label">Правильных:</span>
+                <span class="summary-value correct" id="correctCount">0</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Неправильных:</span>
+                <span class="summary-value incorrect" id="incorrectCount">0</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Итоговая оценка:</span>
+                <span class="summary-value" id="finalScore">0%</span>
+            </div>
+        </div>
+        
+        <div id="detailedAnswers"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- MathJax для математических формул -->
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<script>
+const testData = {{ test_data|tojson }};
+let currentQuestion = 0;
+let answers = {};
+
+function goToQuestion(index) {
+    document.querySelectorAll('.question-slide').forEach(q => q.style.display = 'none');
+    document.getElementById('question-' + index).style.display = 'block';
+    
+    document.querySelectorAll('.question-nav-btn').forEach(btn => btn.classList.remove('current'));
+    document.querySelector(`[data-question="${index}"]`).classList.add('current');
+    
+    currentQuestion = index;
+    
+    // Рендерим математику для нового вопроса
+    if (window.MathJax) {
+        MathJax.typesetPromise();
+    }
+}
+
+function nextQuestion() {
+    if (currentQuestion < testData.questions.length - 1) {
+        goToQuestion(currentQuestion + 1);
+    } else {
+        showReviewModal();
+    }
+}
+
+function prevQuestion() {
+    if (currentQuestion > 0) {
+        goToQuestion(currentQuestion - 1);
+    }
+}
+
+function markAnswered(questionIndex) {
+    const selected = document.querySelector(`input[name="question_${questionIndex}"]:checked`);
+    if (selected) {
+        answers[questionIndex] = parseInt(selected.value);
+        document.getElementById('status-' + questionIndex).textContent = '✓';
+        document.querySelector(`[data-question="${questionIndex}"]`).classList.add('answered');
+        updateAnsweredCount();
+    }
+}
+
+function updateAnsweredCount() {
+    document.getElementById('answeredCount').textContent = Object.keys(answers).length;
+}
+
+function showReviewModal() {
+    const grid = document.getElementById('reviewGrid');
+    grid.innerHTML = '';
+    
+    for (let i = 0; i < testData.questions.length; i++) {
+        const item = document.createElement('div');
+        item.className = 'review-item ' + (answers[i] !== undefined ? 'answered' : 'unanswered');
+        item.textContent = i + 1;
+        item.onclick = () => {
+            closeReviewModal();
+            goToQuestion(i);
+        };
+        grid.appendChild(item);
+    }
+    
+    document.getElementById('reviewModal').classList.add('active');
+}
+
+function closeReviewModal() {
+    document.getElementById('reviewModal').classList.remove('active');
+}
+
+function confirmSubmit() {
+    const unanswered = testData.questions.length - Object.keys(answers).length;
+    if (unanswered > 0) {
+        alert(`Вы не ответили на ${unanswered} вопрос(ов). Вернитесь и ответьте на все вопросы.`);
+        return;
+    }
+    closeReviewModal();
+    document.getElementById('confirmModal').classList.add('active');
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirmModal').classList.remove('active');
+}
+
+function submitTest() {
+    closeConfirmModal();
+    
+    fetch('{{ url_for("check_test", test_id=test.id) }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers: answers })
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('scoreValue').textContent = data.score + '%';
+        document.getElementById('resultText').textContent = 
+            `Правильных ответов: ${data.correct} из ${data.total}`;
+        
+        document.getElementById('correctCount').textContent = data.correct;
+        document.getElementById('incorrectCount').textContent = data.total - data.correct;
+        document.getElementById('finalScore').textContent = data.score + '%';
+        
+        window.testResults = data;
+        document.getElementById('resultModal').classList.add('active');
+    });
+}
+
+function showDetailedResults() {
+    document.getElementById('resultModal').classList.remove('active');
+    document.querySelector('.test-wrapper').style.display = 'none';
+    document.getElementById('detailedResults').style.display = 'block';
+    
+    const container = document.getElementById('detailedAnswers');
+    container.innerHTML = '';
+    
+    testData.questions.forEach((question, i) => {
+        const userAnswer = answers[i];
+        const correctAnswer = question.correct;
+        const isCorrect = userAnswer === correctAnswer;
+        
+        const div = document.createElement('div');
+        div.className = 'detailed-question ' + (isCorrect ? 'correct' : 'incorrect');
+        
+        const russianLetters = 'АБВГ';
+        
+        let html = `
+            <h3>
+                Вопрос ${i + 1}
+                <span class="result-badge ${isCorrect ? 'correct' : 'incorrect'}">
+                    ${isCorrect ? '✓ Правильно' : '✗ Неправильно'}
+                </span>
+            </h3>
+            <p class="math-content">${question.question}</p>
+        `;
+        
+        question.options.forEach((option, j) => {
+            let className = '';
+            let prefix = russianLetters[j] + '. ';
+            
+            if (j === correctAnswer) {
+                className = 'answer-option correct-answer';
+                prefix = '✓ ' + prefix + ' (Правильный ответ) ';
+            } else if (j === userAnswer && !isCorrect) {
+                className = 'answer-option user-incorrect';
+                prefix = '✗ ' + prefix + ' (Ваш ответ) ';
+            } else {
+                className = 'answer-option';
+            }
+            
+            html += `<div class="${className}"><span class="math-content">${prefix}${option}</span></div>`;
+        });
+        
+        // Показываем пояснение для неправильных ответов
+        if (!isCorrect) {
+            let explanation = question.explanation;
+            
+            if (!explanation || explanation.trim() === '') {
+                explanation = `
+                    <strong>Правильный ответ:</strong> ${russianLetters[correctAnswer]}. ${question.options[correctAnswer]}<br><br>
+                    <strong>Ваш ответ был неверным, потому что:</strong><br>
+                    Вы выбрали вариант ${russianLetters[userAnswer]}: "${question.options[userAnswer]}", 
+                    но правильным является вариант ${russianLetters[correctAnswer]}.
+                `;
+            }
+            
+            html += `
+                <div class="explanation">
+                    <strong>💡 Подробное пояснение:</strong>
+                    <div class="explanation-text math-content">${explanation}</div>
+                </div>
+            `;
+        }
+        
+        div.innerHTML = html;
+        container.appendChild(div);
+    });
+    
+    // Рендерим математику для результатов
+    if (window.MathJax) {
+        MathJax.typesetPromise();
+    }
+    
+    window.scrollTo(0, 0);
+}
+
+// Инициализация
+goToQuestion(0);
+
+// Рендерим математику при загрузке
+window.addEventListener('load', function() {
+    if (window.MathJax) {
+        MathJax.typesetPromise();
+    }
+});
+</script>
+{% endblock %}

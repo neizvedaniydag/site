@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Кабинет повара{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cook-container { max-width: 1200px; margin: 0 auto; }
+    .cook-header {
+        background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+        color: white; padding: 2rem; border-radius: 12px;
+        margin-bottom: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .cook-avatar {
+        width: 120px; height: 120px; border-radius: 50%;
+        background: rgba(255,255,255,0.2); display: flex;
+        align-items: center; justify-content: center;
+        font-size: 3rem; margin: 0 auto 1rem; border: 4px solid white;
+    }
+    .stats-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem; margin-bottom: 2rem;
+    }
+    .stat-card {
+        background: white; padding: 1.5rem; border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .stat-value { font-size: 2.5rem; font-weight: bold; color: #fda085; }
+    .stat-label { color: #666; font-size: 0.9rem; }
+    .section-card {
+        background: white; padding: 1.5rem; border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem;
+    }
+    .section-card h3 { margin-top: 0; color: #333; }
+    .recipe-item {
+        padding: 1rem; border: 1px solid #eee; border-radius: 8px;
+        margin-bottom: 1rem; display: flex; justify-content: space-between;
+        align-items: center; transition: background 0.2s;
+    }
+    .recipe-item:hover { background: #f8f9fa; }
+    .recipe-info h4 { margin: 0 0 0.25rem; color: #333; }
+    .recipe-info p { margin: 0; color: #666; font-size: 0.9rem; }
+    .recipe-meta { display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.85rem; color: #888; }
+    .recipe-actions { display: flex; gap: 0.5rem; }
+    .btn-approve {
+        background: #10b981; color: white; border: none; padding: 0.5rem 1rem;
+        border-radius: 6px; cursor: pointer; font-size: 0.9rem;
+    }
+    .btn-approve:hover { background: #059669; }
+    .btn-reject {
+        background: #ef4444; color: white; border: none; padding: 0.5rem 1rem;
+        border-radius: 6px; cursor: pointer; font-size: 0.9rem;
+    }
+    .btn-reject:hover { background: #dc2626; }
+    .badge-pending { background: #f59e0b; color: white; padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.8rem; }
+    .badge-approved { background: #10b981; color: white; padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.8rem; }
+    .empty-state { text-align: center; padding: 3rem; color: #999; }
+    .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cook-container">
+    <div class="cook-header">
+        <div class="cook-avatar"><i class="bi bi-egg-fried"></i></div>
+        <h1 style="text-align:center;margin:0;">{{ current_user.nickname or current_user.username }}</h1>
+        <p style="text-align:center;margin:0.5rem 0 0;opacity:0.9;">@{{ current_user.nickname }}</p>
+        <p style="text-align:center;margin-top:0.5rem;">
+            <span style="background:rgba(255,255,255,0.3);padding:0.25rem 0.75rem;border-radius:12px;font-size:0.85rem;">Повар</span>
+        </p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card" onclick="window.location.href='{{ url_for('recipes') }}'">
+            <div class="stat-value">{{ pending_recipes|length }}</div>
+            <div class="stat-label">Ожидают проверки</div>
+        </div>
+        <div class="stat-card" onclick="window.location.href='{{ url_for('recipes') }}'">
+            <div class="stat-value">{{ approved_recipes|length }}</div>
+            <div class="stat-label">Одобрено</div>
+        </div>
+        <div class="stat-card" onclick="window.location.href='{{ url_for('recipes') }}'">
+            <div class="stat-value">{{ rejected_count }}</div>
+            <div class="stat-label">Отклонено</div>
+        </div>
+    </div>
+
+    <!-- Рецепты на проверку -->
+    <div class="section-card">
+        <h3><i class="bi bi-hourglass-split"></i> Рецепты на проверку</h3>
+        {% if pending_recipes %}
+            {% for recipe in pending_recipes %}
+            <div class="recipe-item" id="recipe-{{ recipe.id }}">
+                <div class="recipe-info">
+                    <h4>{{ recipe.title }} <span class="badge-pending">Ожидает</span></h4>
+                    <p>{{ recipe.instructions[:100] }}{% if recipe.instructions|length > 100 %}...{% endif %}</p>
+                    <div class="recipe-meta">
+                        <span><i class="bi bi-fire"></i> {{ recipe.calories or 0 }} ккал</span>
+                        <span><i class="bi bi-droplet"></i> Б: {{ recipe.proteins or 0 }}г</span>
+                        <span>Ж: {{ recipe.fats or 0 }}г</span>
+                        <span>У: {{ recipe.carbs or 0 }}г</span>
+                        {% if recipe.author %}
+                        <span><i class="bi bi-person"></i> {{ recipe.author.nickname or recipe.author.username }}</span>
+                        {% endif %}
+                        <span><i class="bi bi-clock"></i> {{ recipe.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                    </div>
+                </div>
+                <div class="recipe-actions">
+                    <button class="btn-approve" onclick="approveRecipe({{ recipe.id }})"><i class="bi bi-check-lg"></i> Одобрить</button>
+                    <button class="btn-reject" onclick="rejectRecipe({{ recipe.id }})"><i class="bi bi-x-lg"></i> Отклонить</button>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="bi bi-check-circle"></i>
+                <p>Все рецепты проверены. Новых заявок нет.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Одобренные рецепты -->
+    <div class="section-card">
+        <h3><i class="bi bi-check-circle"></i> Одобренные рецепты</h3>
+        {% if approved_recipes %}
+            {% for recipe in approved_recipes[:10] %}
+            <div class="recipe-item">
+                <div class="recipe-info">
+                    <h4>{{ recipe.title }} <span class="badge-approved">Одобрен</span></h4>
+                    <div class="recipe-meta">
+                        <span><i class="bi bi-fire"></i> {{ recipe.calories or 0 }} ккал</span>
+                        {% if recipe.author %}
+                        <span><i class="bi bi-person"></i> {{ recipe.author.nickname or recipe.author.username }}</span>
+                        {% endif %}
+                        <span><i class="bi bi-clock"></i> {{ recipe.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="bi bi-journal-x"></i>
+                <p>Пока нет одобренных рецептов</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function approveRecipe(id) {
+    if (!confirm('Одобрить этот рецепт?')) return;
+    fetch('/cook/recipe/' + id + '/approve', { method: 'POST', headers: {'Content-Type': 'application/json'} })
+    .then(r => r.json()).then(data => {
+        if (data.success) {
+            document.getElementById('recipe-' + id).remove();
+            alert('Рецепт одобрен');
+            location.reload();
+        } else { alert(data.error || 'Ошибка'); }
+    });
+}
+function rejectRecipe(id) {
+    if (!confirm('Отклонить этот рецепт?')) return;
+    fetch('/cook/recipe/' + id + '/reject', { method: 'POST', headers: {'Content-Type': 'application/json'} })
+    .then(r => r.json()).then(data => {
+        if (data.success) {
+            document.getElementById('recipe-' + id).remove();
+            alert('Рецепт отклонён');
+            location.reload();
+        } else { alert(data.error || 'Ошибка'); }
+    });
+}
+</script>
+{% endblock %}

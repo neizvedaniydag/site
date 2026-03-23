@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Обучение и теория</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <h3>Видеоуроки 🎥</h3>
+            <div class="list-group">
+                {% for material in materials if material.content_type == 'video' %}
+                <a href="{{ url_for('view_material', material_id=material.id) }}" class="list-group-item list-group-item-action">
+                    <h5>{{ material.title }}</h5>
+                    <small class="text-muted">{{ material.category }}</small>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <h3>Статьи 📖</h3>
+            <div class="list-group">
+                {% for material in materials if material.content_type == 'article' %}
+                <a href="{{ url_for('view_material', material_id=material.id) }}" class="list-group-item list-group-item-action">
+                    <h5>{{ material.title }}</h5>
+                    <small class="text-muted">{{ material.category }}</small>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <h3>Инструкции 📝</h3>
+            <div class="list-group">
+                {% for material in materials if material.content_type == 'instruction' %}
+                <a href="{{ url_for('view_material', material_id=material.id) }}" class="list-group-item list-group-item-action">
+                    <h5>{{ material.title }}</h5>
+                    <small class="text-muted">{{ material.category }}</small>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

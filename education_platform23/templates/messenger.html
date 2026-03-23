@@ -1,0 +1,1664 @@
+{% extends "base.html" %}
+{% block title %}Мессенджер{% endblock %}
+
+{% block extra_css %}
+<style>
+    .messenger-container {
+        display: flex;
+        height: calc(100vh - 200px);
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .conversations-list {
+        width: 300px;
+        border-right: 1px solid #e0e0e0;
+        overflow-y: auto;
+        background: #f8f9fa;
+    }
+    
+    .conversations-header {
+        padding: 1rem;
+        background: #3498db;
+        color: white;
+        font-weight: bold;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .conversation-item {
+        padding: 1rem;
+        border-bottom: 1px solid #e0e0e0;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .conversation-item:hover {
+        background: #e9ecef;
+    }
+    
+    .conversation-item.active {
+        background: #d0e8ff;
+        border-left: 4px solid #3498db;
+    }
+    
+    .conversation-info {
+        flex: 1;
+    }
+    
+    .conversation-username {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 0.25rem;
+    }
+    
+    .conversation-preview {
+        font-size: 0.9rem;
+        color: #666;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .conversation-time {
+        font-size: 0.75rem;
+        color: #999;
+        margin-top: 0.25rem;
+    }
+    
+    .unread-badge {
+        background: #e74c3c;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: bold;
+        margin-left: 0.5rem;
+    }
+    
+    .chat-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chat-header {
+        padding: 1rem;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e0e0e0;
+        font-weight: bold;
+        color: #333;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        background: #ffffff;
+    }
+    
+    .message {
+        margin-bottom: 1rem;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .message.sent {
+        align-items: flex-end;
+    }
+    
+    .message.received {
+        align-items: flex-start;
+    }
+    
+    .message-bubble {
+        max-width: 70%;
+        padding: 0.75rem 1rem;
+        border-radius: 18px;
+        word-wrap: break-word;
+    }
+    
+    .message.sent .message-bubble {
+        background: #3498db;
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+    
+    .message.received .message-bubble {
+        background: #e9ecef;
+        color: #333;
+        border-bottom-left-radius: 4px;
+    }
+    
+    .message-time {
+        font-size: 0.75rem;
+        color: #999;
+        margin-top: 0.25rem;
+        padding: 0 0.5rem;
+    }
+    
+    .chat-input-area {
+        padding: 1rem;
+        border-top: 1px solid #e0e0e0;
+        background: #f8f9fa;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .chat-input {
+        flex: 1;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        outline: none;
+    }
+    
+    .chat-input:focus {
+        border-color: #3498db;
+    }
+    
+    .send-btn {
+        padding: 0.75rem 1.5rem;
+        background: #3498db;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .send-btn:hover {
+        background: #2980b9;
+    }
+    
+    .send-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+    
+    .empty-chat {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #999;
+        font-size: 1.1rem;
+    }
+    
+    .no-conversations {
+        padding: 2rem;
+        text-align: center;
+        color: #999;
+    }
+    
+    #searchResults {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    #searchResults .conversation-item {
+        border-bottom: 1px solid #eee;
+    }
+    
+    #searchResults .conversation-item:last-child {
+        border-bottom: none;
+    }
+
+    #fileInput {
+        display: none;
+    }
+
+    .file-attachment-display {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: #f0f7ff;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        border: 1px solid #cce5ff;
+    }
+
+    .file-attachment-display i {
+        font-size: 2rem;
+        color: #3498db;
+    }
+
+    .file-attachment-info {
+        flex: 1;
+    }
+
+    .file-attachment-name {
+        font-weight: bold;
+        color: #333;
+        word-break: break-word;
+    }
+
+    .file-attachment-size {
+        font-size: 0.85rem;
+        color: #666;
+        margin-top: 0.25rem;
+    }
+
+    .file-attachment-remove {
+        background: transparent;
+        border: none;
+        color: #e74c3c;
+        cursor: pointer;
+        font-size: 1.2rem;
+        padding: 0;
+        transition: transform 0.2s;
+    }
+
+    .file-attachment-remove:hover {
+        transform: scale(1.2);
+    }
+
+    .message-reactions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        margin-top: 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .reaction-button {
+        background: #f0f0f0;
+        border: 1px solid #d0d0d0;
+        border-radius: 16px;
+        padding: 0.25rem 0.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 1rem;
+        transition: all 0.2s;
+    }
+
+    .reaction-button:hover {
+        background: #e0e0e0;
+        transform: scale(1.1);
+    }
+
+    .reaction-button.active {
+        background: #3498db;
+        color: white;
+        border-color: #3498db;
+    }
+
+    .reaction-count {
+        font-size: 0.8rem;
+        line-height: 1;
+    }
+
+    .emoji-picker-btn {
+        padding: 0.75rem 1rem;
+        background: #f0f0f0;
+        color: #333;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 1.2rem;
+        transition: background 0.2s;
+    }
+
+    .emoji-picker-btn:hover {
+        background: #e0e0e0;
+    }
+
+    .emoji-picker {
+        position: fixed;
+        bottom: auto;
+        right: 20px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        max-width: 350px;
+        display: none;
+    }
+
+    .emoji-picker.active {
+        display: block;
+    }
+
+    .emoji-picker-header {
+        padding: 0.75rem;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .emoji-picker-close {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        color: #666;
+    }
+
+    .emoji-grid {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 0.5rem;
+        padding: 0.75rem;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .emoji-item {
+        font-size: 1.5rem;
+        cursor: pointer;
+        text-align: center;
+        padding: 0.5rem;
+        border-radius: 4px;
+        transition: background 0.2s;
+    }
+
+    .emoji-item:hover {
+        background: #f0f0f0;
+        transform: scale(1.2);
+    }
+
+    .message-actions {
+        position: absolute;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        padding: 0.5rem;
+        display: flex;
+        gap: 0.5rem;
+        z-index: 500;
+    }
+
+    .message-action-btn {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 4px;
+        transition: background 0.2s;
+    }
+
+    .message-action-btn:hover {
+        background: #f0f0f0;
+    }
+
+    .message-wrapper {
+        position: relative;
+        display: inline-flex;
+        flex-direction: column;
+    }
+
+    .back-to-conversations {
+        display: none;
+        background: none;
+        border: none;
+        color: #3498db;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 0.5rem;
+        margin-right: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .messenger-container {
+            height: calc(100vh - 150px);
+        }
+
+        .conversations-list {
+            width: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            z-index: 2;
+            transition: transform 0.3s ease;
+        }
+
+        .conversations-list.hidden {
+            transform: translateX(-100%);
+        }
+
+        .chat-area {
+            width: 100%;
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .chat-area.active {
+            z-index: 3;
+        }
+
+        .back-to-conversations {
+            display: inline-block;
+        }
+
+        .message-bubble {
+            max-width: 85%;
+        }
+
+        .chat-input-area {
+            padding: 0.75rem;
+        }
+
+        .send-btn {
+            padding: 0.75rem 1rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .messenger-container {
+            height: calc(100vh - 120px);
+            border-radius: 0;
+        }
+
+        .conversations-header {
+            padding: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .conversation-item {
+            padding: 0.75rem;
+        }
+
+        .chat-header {
+            padding: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .message-bubble {
+            max-width: 90%;
+            padding: 0.6rem 0.85rem;
+            font-size: 0.95rem;
+        }
+
+        .chat-input {
+            font-size: 0.95rem;
+        }
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4"><i class="bi bi-chat-dots"></i> Мессенджер</h1>
+    
+    <div class="messenger-container">
+        <!-- Список диалогов -->
+        <div class="conversations-list">
+            <div class="conversations-header">
+                <i class="bi bi-people"></i> Диалоги
+            </div>
+            
+            <!-- Поиск пользователей -->
+            <div style="padding: 0.75rem; border-bottom: 1px solid #e0e0e0;">
+                <input type="text" id="userSearch" class="form-control" placeholder="Поиск по никнейму..." 
+                       style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                       onkeyup="searchUsers(this.value)">
+                <div id="searchResults" style="margin-top: 0.5rem; max-height: 200px; overflow-y: auto; display: none;"></div>
+            </div>
+            
+            {% if conversations %}
+                {% for conv in conversations %}
+                <div class="conversation-item" data-user-id="{{ conv.user.id }}" data-username="{{ conv.user.username }}" onclick="loadConversation({{ conv.user.id }}, this.dataset.username)">
+                    <div class="conversation-info">
+                        <div class="conversation-username">{{ conv.user.nickname or conv.user.username }} (@{{ conv.user.nickname or conv.user.username }})</div>
+                        {% if conv.last_message %}
+                            <div class="conversation-preview">
+                                {% if conv.last_message.sender_id == current_user.id %}
+                                    <strong>Вы:</strong> 
+                                {% endif %}
+                                {{ conv.last_message.content[:50] }}{% if conv.last_message.content|length > 50 %}...{% endif %}
+                            </div>
+                            <div class="conversation-time">
+                                {{ conv.last_message.created_at.strftime('%d.%m.%Y %H:%M') }}
+                            </div>
+                        {% else %}
+                            <div class="conversation-preview" style="color: #999;">Нет сообщений</div>
+                        {% endif %}
+                    </div>
+                    {% if conv.unread_count > 0 %}
+                        <span class="unread-badge">{{ conv.unread_count }}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-conversations">
+                    <p>Нет диалогов</p>
+                    <p style="font-size: 0.9rem;">Начните новый диалог, выбрав пользователя</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Область чата -->
+        <div class="chat-area">
+            <div class="chat-header" id="chatHeader">
+                <span id="chatUserName">Выберите диалог</span>
+                <div style="margin-left: auto;">
+                    <button class="btn btn-sm btn-primary" id="callBtn" onclick="startAudioCall()" style="display: none;">
+                        <i class="bi bi-telephone-fill"></i> Звонок
+                    </button>
+                </div>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="empty-chat">
+                    Выберите диалог для начала общения
+                </div>
+            </div>
+            
+            <div class="chat-input-area" id="chatInputArea" style="display: none;">
+                <div style="width: 100%; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <div id="fileAttachmentDisplay" style="display: none;">
+                        <div class="file-attachment-display">
+                            <i id="fileAttachmentIcon" class="bi bi-file-earmark"></i>
+                            <div class="file-attachment-info">
+                                <div class="file-attachment-name" id="fileAttachmentName"></div>
+                                <div class="file-attachment-size" id="fileAttachmentSize"></div>
+                            </div>
+                            <button class="file-attachment-remove" onclick="clearFileSelection()">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: flex-end;">
+                        <input type="text" class="chat-input" id="messageInput" placeholder="Введите сообщение..." onkeypress="handleKeyPress(event)">
+                        <input type="file" id="fileInput" style="display: none;" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" onchange="handleFileSelect()">
+                        <button class="emoji-picker-btn" title="Смайлик" onclick="toggleEmojiPicker()">😊</button>
+                        <button class="send-btn" onclick="document.getElementById('fileInput').click()" id="attachBtn" style="padding: 0.75rem 1rem;" title="Прикрепить файл или фото">
+                            <i class="bi bi-paperclip"></i>
+                        </button>
+                        <button class="send-btn" onclick="sendMessage()" id="sendBtn" title="Отправить сообщение">
+                            <i class="bi bi-send"></i> Отправить
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Эмодзи пикер для выбора реакций -->
+            <div id="emojiPickerForReactions" class="emoji-picker">
+                <div class="emoji-picker-header">
+                    <span>Выберите эмодзи</span>
+                    <button class="emoji-picker-close" onclick="closeReactionPicker()">✕</button>
+                </div>
+                <div class="emoji-grid" id="reactionEmojiGrid">
+                    <!-- Будет заполнено JavaScript -->
+                </div>
+            </div>
+            
+            <!-- Эмодзи пикер для вставки в текст -->
+            <div id="emojiPickerForText" class="emoji-picker">
+                <div class="emoji-picker-header">
+                    <span>Выберите эмодзи</span>
+                    <button class="emoji-picker-close" onclick="closeEmojiPicker()">✕</button>
+                </div>
+                <div class="emoji-grid" id="textEmojiGrid">
+                    <!-- Будет заполнено JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CURRENT_USER_ID = {{ current_user.id }};
+let currentUserId = null;
+let currentUserName = null;
+let messageInterval = null;
+
+function loadConversation(userId, userName) {
+    currentUserId = userId;
+    currentUserName = userName;
+
+    // Обновляем активный элемент
+    document.querySelectorAll('.conversation-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    const existingItem = document.querySelector(`[data-user-id="${userId}"]`);
+    if (existingItem) {
+        existingItem.classList.add('active');
+    }
+
+    // Мобильная навигация
+    if (window.innerWidth <= 768) {
+        document.querySelector('.conversations-list').classList.add('hidden');
+        document.querySelector('.chat-area').classList.add('active');
+    }
+
+    // Обновляем заголовок
+    const chatHeader = document.getElementById('chatHeader');
+    chatHeader.innerHTML = `
+        <button class="back-to-conversations" onclick="backToConversations()">
+            <i class="bi bi-arrow-left"></i>
+        </button>
+        <span><i class="bi bi-person-circle"></i> ${userName}</span>
+        <div style="margin-left: auto;">
+            <button class="btn btn-sm btn-primary" id="callBtn" onclick="startAudioCall()">
+                <i class="bi bi-telephone-fill"></i> Звонок
+            </button>
+        </div>
+    `;
+
+    // Показываем область ввода
+    document.getElementById('chatInputArea').style.display = 'flex';
+
+    // Загружаем сообщения
+    fetch(`/api/messenger/conversation/${userId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayMessages(data.messages);
+                // Обновляем список диалогов (убираем badge непрочитанных)
+                updateConversationList();
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки сообщений:', error);
+        });
+    
+    // Запускаем автообновление каждые 3 секунды
+    if (messageInterval) {
+        clearInterval(messageInterval);
+    }
+    messageInterval = setInterval(() => {
+        if (currentUserId) {
+            fetch(`/api/messenger/conversation/${currentUserId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayMessages(data.messages);
+                    }
+                })
+                .catch(error => console.error('Ошибка автообновления:', error));
+        }
+    }, 3000);
+}
+
+function displayMessages(messages) {
+    const messagesContainer = document.getElementById('chatMessages');
+    
+    if (messages.length === 0) {
+        messagesContainer.innerHTML = '<div class="empty-chat">Нет сообщений. Начните диалог!</div>';
+        return;
+    }
+    
+    messagesContainer.innerHTML = '';
+    
+    messages.forEach(msg => {
+        const isSent = msg.sender_id === CURRENT_USER_ID;
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+        
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        bubble.style.maxWidth = msg.message_type === 'photo' ? '300px' : '70%';
+        
+        // Обработка разных типов сообщений
+        if (msg.message_type === 'photo' && msg.file_path) {
+            // Фото
+            const img = document.createElement('img');
+            img.src = msg.file_path;
+            img.style.maxWidth = '100%';
+            img.style.borderRadius = '8px';
+            img.style.cursor = 'pointer';
+            img.onclick = () => window.open(msg.file_path, '_blank');
+            bubble.appendChild(img);
+        } else if (msg.message_type === 'file' && msg.file_path) {
+            // Файл
+            const fileName = msg.file_path.split('/').pop().substring(16); // Убираем временную метку
+            const fileExt = fileName.split('.').pop().toLowerCase();
+            const fileIcon = getFileIcon(fileExt);
+            
+            const fileDiv = document.createElement('div');
+            fileDiv.style.cssText = 'display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.2); border-radius: 8px;';
+            
+            const icon = document.createElement('i');
+            icon.className = fileIcon;
+            icon.style.fontSize = '1.5rem';
+            
+            const fileInfo = document.createElement('div');
+            fileInfo.style.flex = '1';
+            fileInfo.innerHTML = `
+                <div style="font-weight: bold; word-break: break-word;">${fileName}</div>
+            `;
+            
+            const downloadBtn = document.createElement('a');
+            downloadBtn.href = msg.file_path;
+            downloadBtn.download = fileName;
+            downloadBtn.className = 'btn btn-sm btn-light';
+            downloadBtn.innerHTML = '<i class="bi bi-download"></i>';
+            downloadBtn.style.marginLeft = '0.5rem';
+            
+            fileDiv.appendChild(icon);
+            fileDiv.appendChild(fileInfo);
+            fileDiv.appendChild(downloadBtn);
+            bubble.appendChild(fileDiv);
+        } else if (msg.message_type === 'call') {
+            // Звонок
+            bubble.textContent = '📞 ' + msg.content;
+            bubble.style.fontStyle = 'italic';
+        } else {
+            // Текстовое сообщение
+            bubble.textContent = msg.content;
+        }
+        
+        const time = document.createElement('div');
+        time.className = 'message-time';
+        const msgDate = new Date(msg.created_at);
+        time.textContent = msgDate.toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        messageDiv.appendChild(bubble);
+        messageDiv.appendChild(time);
+        
+        // Загружаем реакции untuk сообщения
+        loadMessageReactions(msg.id, messageDiv);
+        
+        messagesContainer.appendChild(messageDiv);
+    });
+    
+    // Прокрутка вниз
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function getFileIcon(ext) {
+    const icons = {
+        'pdf': 'bi bi-file-pdf',
+        'doc': 'bi bi-file-word',
+        'docx': 'bi bi-file-word',
+        'xls': 'bi bi-file-excel',
+        'xlsx': 'bi bi-file-excel',
+        'txt': 'bi bi-file-text',
+        'jpg': 'bi bi-file-image',
+        'png': 'bi bi-file-image',
+        'jpeg': 'bi bi-file-image',
+        'zip': 'bi bi-file-zip',
+        'rar': 'bi bi-file-zip'
+    };
+    return icons[ext] || 'bi bi-file-earmark';
+}
+
+let selectedFile = null;
+
+function handleFileSelect() {
+    const fileInput = document.getElementById('fileInput');
+    selectedFile = fileInput.files[0] || null;
+    
+    if (selectedFile) {
+        const fileAttachmentDisplay = document.getElementById('fileAttachmentDisplay');
+        const fileName = selectedFile.name;
+        const fileSize = (selectedFile.size / 1024).toFixed(2);
+        const fileExt = fileName.split('.').pop().toLowerCase();
+        
+        // Обновляем иконку на основе типа файла
+        const fileIcon = document.getElementById('fileAttachmentIcon');
+        fileIcon.className = getFileIcon(fileExt).replace('bi bi-', 'bi bi-') || 'bi bi-file-earmark';
+        
+        // Обновляем информацию о файле
+        document.getElementById('fileAttachmentName').textContent = fileName;
+        document.getElementById('fileAttachmentSize').textContent = `${fileSize} KB`;
+        
+        // Показываем блок с информацией о файле
+        fileAttachmentDisplay.style.display = 'block';
+    }
+}
+
+function clearFileSelection() {
+    selectedFile = null;
+    document.getElementById('fileInput').value = '';
+    document.getElementById('fileAttachmentDisplay').style.display = 'none';
+}
+
+function backToConversations() {
+    if (window.innerWidth <= 768) {
+        document.querySelector('.conversations-list').classList.remove('hidden');
+        document.querySelector('.chat-area').classList.remove('active');
+    }
+}
+
+function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const content = input.value.trim();
+    
+    if (!content && !selectedFile && !currentUserId) {
+        return;
+    }
+    
+    const sendBtn = document.getElementById('sendBtn');
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+    
+    if (selectedFile) {
+        // Отправка файла
+        const formData = new FormData();
+        formData.append('receiver_id', currentUserId);
+        formData.append('file', selectedFile);
+        formData.append('message', content || `Файл: ${selectedFile.name}`);
+        
+        const isImage = selectedFile.type.startsWith('image/');
+        const fileName = selectedFile.name;
+        
+        fetch('/api/messenger/send', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                input.value = '';
+                clearFileSelection();
+                
+                // Добавляем файлово сообщение в чат
+                const messagesContainer = document.getElementById('chatMessages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message sent';
+                
+                const bubble = document.createElement('div');
+                bubble.className = 'message-bubble';
+                bubble.style.maxWidth = isImage ? '300px' : '70%';
+                
+                if (isImage) {
+                    const img = document.createElement('img');
+                    img.src = data.message.file_path;
+                    img.style.maxWidth = '100%';
+                    img.style.borderRadius = '8px';
+                    img.style.cursor = 'pointer';
+                    img.onclick = () => window.open(data.message.file_path, '_blank');
+                    bubble.appendChild(img);
+                } else {
+                    const filePathName = data.message.file_path.split('/').pop().substring(16);
+                    const fileExt = filePathName.split('.').pop().toLowerCase();
+                    const fileIcon = getFileIcon(fileExt);
+                    
+                    const fileDiv = document.createElement('div');
+                    fileDiv.style.cssText = 'display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.2); border-radius: 8px;';
+                    
+                    const icon = document.createElement('i');
+                    icon.className = fileIcon;
+                    icon.style.fontSize = '1.5rem';
+                    
+                    const fileInfo = document.createElement('div');
+                    fileInfo.style.flex = '1';
+                    fileInfo.innerHTML = `<div style="font-weight: bold; word-break: break-word;">${filePathName}</div>`;
+                    
+                    const downloadBtn = document.createElement('a');
+                    downloadBtn.href = data.message.file_path;
+                    downloadBtn.download = filePathName;
+                    downloadBtn.className = 'btn btn-sm btn-light';
+                    downloadBtn.innerHTML = '<i class="bi bi-download"></i>';
+                    downloadBtn.style.marginLeft = '0.5rem';
+                    
+                    fileDiv.appendChild(icon);
+                    fileDiv.appendChild(fileInfo);
+                    fileDiv.appendChild(downloadBtn);
+                    bubble.appendChild(fileDiv);
+                }
+                
+                const time = document.createElement('div');
+                time.className = 'message-time';
+                const now = new Date();
+                time.textContent = now.toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                messageDiv.appendChild(bubble);
+                messageDiv.appendChild(time);
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                updateConversationPreview(currentUserId, `Файл: ${fileName}`);
+            } else {
+                alert('Ошибка отправки: ' + (data.error || 'Неизвестная ошибка'));
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка отправки:', error);
+            alert('Ошибка отправки файла');
+        })
+        .finally(() => {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="bi bi-send"></i> Отправить';
+        });
+    } else {
+        // Отправка текстового сообщения
+        if (!content) {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="bi bi-send"></i> Отправить';
+            return;
+        }
+        
+        fetch('/api/messenger/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                receiver_id: currentUserId,
+                content: content
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                input.value = '';
+                // Добавляем новое сообщение сразу в чат
+                const messagesContainer = document.getElementById('chatMessages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message sent';
+                
+                const bubble = document.createElement('div');
+                bubble.className = 'message-bubble';
+                bubble.textContent = content;
+                
+                const time = document.createElement('div');
+                time.className = 'message-time';
+                const now = new Date();
+                time.textContent = now.toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                messageDiv.appendChild(bubble);
+                messageDiv.appendChild(time);
+                messagesContainer.appendChild(messageDiv);
+                
+                // Прокрутка вниз
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // Обновляем список диалогов без перезагрузки страницы
+                updateConversationPreview(currentUserId, content);
+            } else {
+                alert('Ошибка отправки: ' + (data.error || 'Неизвестная ошибка'));
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка отправки:', error);
+            alert('Ошибка отправки сообщения');
+        })
+        .finally(() => {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="bi bi-send"></i> Отправить';
+        });
+    }
+}
+
+function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+        sendMessage();
+    }
+}
+
+function updateConversationList() {
+    // Обновляем счетчик непрочитанных
+    fetch('/api/messenger/unread-count')
+        .then(response => response.json())
+        .then(data => {
+            // Можно обновить badge в навигации, если нужно
+        });
+}
+
+function updateConversationPreview(userId, lastMessage) {
+    // Обновляем или создаем превью последнего сообщения
+    let conversationItem = document.querySelector(`[data-user-id="${userId}"]`);
+    const conversationsList = document.querySelector('.conversations-list');
+
+    if (!conversationItem && conversationsList) {
+        const newItem = document.createElement('div');
+        newItem.className = 'conversation-item';
+        newItem.dataset.userId = userId;
+        newItem.dataset.username = currentUserName || 'Собеседник';
+        newItem.onclick = () => loadConversation(userId, currentUserName || 'Собеседник');
+        newItem.innerHTML = `
+            <div class="conversation-info">
+                <div class="conversation-username">${currentUserName || 'Собеседник'}</div>
+                <div class="conversation-preview" style="color: #666;">Новое сообщение</div>
+                <div class="conversation-time"></div>
+            </div>
+        `;
+        conversationsList.appendChild(newItem);
+        const placeholder = document.querySelector('.no-conversations');
+        if (placeholder) {
+            placeholder.remove();
+        }
+        conversationItem = newItem;
+    }
+
+    if (conversationItem) {
+        conversationItem.classList.add('active');
+        const preview = conversationItem.querySelector('.conversation-preview');
+        if (preview) {
+            preview.innerHTML = `<strong>Вы:</strong> ${lastMessage.length > 50 ? lastMessage.substring(0, 50) + '...' : lastMessage}`;
+        }
+        const timeElement = conversationItem.querySelector('.conversation-time');
+        if (timeElement) {
+            const now = new Date();
+            timeElement.textContent = now.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+    }
+}
+
+function searchUsers(query) {
+    const searchResults = document.getElementById('searchResults');
+    
+    if (query.length < 2) {
+        searchResults.style.display = 'none';
+        return;
+    }
+    
+    fetch(`/api/messenger/search-users?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.users.length > 0) {
+                searchResults.innerHTML = '';
+                data.users.forEach(user => {
+                    const userDiv = document.createElement('div');
+                    userDiv.className = 'conversation-item';
+                    userDiv.style.cursor = 'pointer';
+                    userDiv.innerHTML = `
+                        <div class="conversation-info">
+                            <div class="conversation-username">${user.nickname || user.username} (@${user.nickname || user.username})</div>
+                            <div class="conversation-preview" style="color: #666;">${user.email}</div>
+                        </div>
+                    `;
+                    userDiv.onclick = () => {
+                        loadConversation(user.id, user.nickname || user.username);
+                        searchResults.style.display = 'none';
+                        document.getElementById('userSearch').value = '';
+                    };
+                    searchResults.appendChild(userDiv);
+                });
+                searchResults.style.display = 'block';
+            } else {
+                searchResults.innerHTML = '<div style="padding: 0.5rem; color: #999;">Пользователи не найдены</div>';
+                searchResults.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка поиска:', error);
+        });
+}
+
+let localAudioStream = null;
+let remoteAudioStream = null;
+let peerConnection = null;
+let isCallActive = false;
+
+async function checkMicrophonePermission() {
+    try {
+        // Проверяем доступность API
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('Ваш браузер не поддерживает доступ к микрофону');
+        }
+        
+        // Проверяем разрешения (если поддерживается)
+        if (navigator.permissions) {
+            const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+            console.log('[INFO] Статус разрешения микрофона:', permissionStatus.state);
+            
+            if (permissionStatus.state === 'denied') {
+                throw new Error('Доступ к микрофону запрещен. Разрешите доступ в настройках браузера.');
+            }
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('[ERROR] Ошибка проверки разрешений:', error);
+        throw error;
+    }
+}
+
+async function requestMicrophoneAccess() {
+    try {
+        // Сначала проверяем разрешения
+        await checkMicrophonePermission();
+        
+        // Запрашиваем доступ к микрофону
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            }, 
+            video: false 
+        });
+        
+        return stream;
+    } catch (error) {
+        console.error('[ERROR] Ошибка доступа к микрофону:', error);
+        
+        let errorMessage = 'Не удалось получить доступ к микрофону.';
+        
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+            errorMessage = 'Доступ к микрофону запрещен. Пожалуйста, разрешите доступ к микрофону в настройках браузера и попробуйте снова.';
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+            errorMessage = 'Микрофон не найден. Убедитесь, что микрофон подключен к устройству.';
+        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+            errorMessage = 'Микрофон используется другим приложением. Закройте другие приложения, использующие микрофон.';
+        } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
+            errorMessage = 'Микрофон не поддерживает требуемые настройки.';
+        } else if (error.name === 'TypeError') {
+            errorMessage = 'Ваш браузер не поддерживает доступ к микрофону. Используйте современный браузер (Chrome, Firefox, Edge).';
+        }
+        
+        throw { message: errorMessage, originalError: error };
+    }
+}
+
+function startAudioCall() {
+    if (!currentUserId) {
+        alert('Выберите собеседника для звонка');
+        return;
+    }
+    
+    if (isCallActive) {
+        alert('Звонок уже активен');
+        return;
+    }
+    
+    // Создаем модальное окно для аудио звонка
+    const callModal = document.createElement('div');
+    callModal.id = 'audioCallModal';
+    callModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.9);
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    callModal.innerHTML = `
+        <div style="background: #fff; padding: 3rem; border-radius: 12px; max-width: 500px; width: 90%; text-align: center;">
+            <div style="width: 150px; height: 150px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0 auto 2rem; display: flex; align-items: center; justify-content: center; font-size: 4rem; color: white;">
+                <i class="bi bi-person-circle"></i>
+            </div>
+            <h3 style="margin-bottom: 0.5rem;">Звонок с ${currentUserName}</h3>
+            <p id="callStatus" style="color: #666; margin-bottom: 2rem;">
+                <i class="bi bi-hourglass-split"></i> Запрос доступа к микрофону...
+            </p>
+            <div id="permissionRequest" style="margin-bottom: 1rem;">
+                <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                    Для звонка необходим доступ к микрофону. Нажмите "Разрешить" в запросе браузера.
+                </p>
+                <button class="btn btn-primary" id="requestPermissionBtn" onclick="requestMicrophoneForCall()" style="padding: 0.75rem 1.5rem;">
+                    <i class="bi bi-mic"></i> Запросить доступ к микрофону
+                </button>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+                <button class="btn btn-success btn-lg" id="startCallBtn" onclick="initiateAudioCall()" style="padding: 1rem 2rem; display: none;">
+                    <i class="bi bi-telephone-fill"></i> Начать звонок
+                </button>
+                <button class="btn btn-danger btn-lg" onclick="endAudioCall()" style="padding: 1rem 2rem;">
+                    <i class="bi bi-x-circle"></i> Отменить
+                </button>
+            </div>
+            <div id="callControls" style="display: none; margin-top: 2rem;">
+                <button class="btn btn-warning" id="muteBtn" onclick="toggleMute()" style="margin-right: 1rem;">
+                    <i class="bi bi-mic"></i> <span id="muteText">Выключить микрофон</span>
+                </button>
+                <button class="btn btn-danger" onclick="endAudioCall()">
+                    <i class="bi bi-telephone-x"></i> Завершить звонок
+                </button>
+            </div>
+            <div id="errorMessage" style="display: none; margin-top: 1rem; padding: 1rem; background: #fee; border: 1px solid #fcc; border-radius: 4px; color: #c33;"></div>
+            <audio id="remoteAudio" autoplay style="display: none;"></audio>
+        </div>
+    `;
+    
+    document.body.appendChild(callModal);
+    
+    // Автоматически запрашиваем доступ к микрофону
+    requestMicrophoneForCall();
+}
+
+async function requestMicrophoneForCall() {
+    const statusEl = document.getElementById('callStatus');
+    const permissionRequest = document.getElementById('permissionRequest');
+    const requestBtn = document.getElementById('requestPermissionBtn');
+    const startCallBtn = document.getElementById('startCallBtn');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    // Скрываем предыдущие ошибки
+    errorMessage.style.display = 'none';
+    errorMessage.textContent = '';
+    
+    // Обновляем статус
+    statusEl.innerHTML = '<i class="bi bi-hourglass-split"></i> Запрос доступа к микрофону...';
+    requestBtn.disabled = true;
+    requestBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Запрос...';
+    
+    try {
+        // Запрашиваем доступ к микрофону
+        localAudioStream = await requestMicrophoneAccess();
+        
+        // Успешно получили доступ
+        statusEl.innerHTML = '<i class="bi bi-check-circle" style="color: #10b981;"></i> Микрофон подключен';
+        statusEl.style.color = '#10b981';
+        permissionRequest.style.display = 'none';
+        startCallBtn.style.display = 'inline-block';
+        
+        // Показываем индикатор активности микрофона
+        const audioTracks = localAudioStream.getAudioTracks();
+        if (audioTracks.length > 0) {
+            console.log('[OK] Микрофон подключен:', audioTracks[0].label);
+            console.log('[INFO] Настройки микрофона:', {
+                echoCancellation: audioTracks[0].getSettings().echoCancellation,
+                noiseSuppression: audioTracks[0].getSettings().noiseSuppression,
+                autoGainControl: audioTracks[0].getSettings().autoGainControl
+            });
+        }
+        
+    } catch (error) {
+        // Ошибка доступа
+        console.error('[ERROR] Ошибка доступа к микрофону:', error);
+        
+        statusEl.innerHTML = '<i class="bi bi-x-circle" style="color: #ef4444;"></i> Ошибка доступа к микрофону';
+        statusEl.style.color = '#ef4444';
+        
+        errorMessage.textContent = error.message || 'Не удалось получить доступ к микрофону';
+        errorMessage.style.display = 'block';
+        
+        requestBtn.disabled = false;
+        requestBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Попробовать снова';
+        startCallBtn.style.display = 'none';
+        
+        // Показываем инструкции для разных браузеров
+        const browserInstructions = getBrowserInstructions();
+        if (browserInstructions) {
+            errorMessage.innerHTML += '<br><br><strong>Как разрешить доступ:</strong><br>' + browserInstructions;
+        }
+    }
+}
+
+function getBrowserInstructions() {
+    const userAgent = navigator.userAgent.toLowerCase();
+    
+    if (userAgent.includes('chrome')) {
+        return 'Chrome: Нажмите на иконку замка в адресной строке → Разрешения → Микрофон → Разрешить';
+    } else if (userAgent.includes('firefox')) {
+        return 'Firefox: Нажмите на иконку замка в адресной строке → Разрешения → Микрофон → Разрешить';
+    } else if (userAgent.includes('edge')) {
+        return 'Edge: Нажмите на иконку замка в адресной строке → Разрешения → Микрофон → Разрешить';
+    } else if (userAgent.includes('safari')) {
+        return 'Safari: Safari → Настройки → Веб-сайты → Микрофон → Разрешить для этого сайта';
+    }
+    
+    return 'Откройте настройки браузера и разрешите доступ к микрофону для этого сайта';
+}
+
+function initiateAudioCall() {
+    if (!localAudioStream) {
+        alert('Микрофон не подключен. Пожалуйста, сначала разрешите доступ к микрофону.');
+        requestMicrophoneForCall();
+        return;
+    }
+    
+    // Проверяем, что микрофон все еще активен
+    const audioTracks = localAudioStream.getAudioTracks();
+    if (audioTracks.length === 0 || audioTracks[0].readyState !== 'live') {
+        alert('Микрофон недоступен. Пожалуйста, разрешите доступ снова.');
+        requestMicrophoneForCall();
+        return;
+    }
+    
+    isCallActive = true;
+    document.getElementById('callStatus').textContent = 'Звонок активен';
+    document.getElementById('startCallBtn').style.display = 'none';
+    document.getElementById('callControls').style.display = 'block';
+    
+    // Создаем RTCPeerConnection для WebRTC
+    const configuration = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+    };
+    
+    peerConnection = new RTCPeerConnection(configuration);
+    
+    // Добавляем локальный аудио поток
+    localAudioStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localAudioStream);
+    });
+    
+    // Обработка удаленного аудио потока
+    peerConnection.ontrack = (event) => {
+        remoteAudioStream = event.streams[0];
+        const remoteAudio = document.getElementById('remoteAudio');
+        remoteAudio.srcObject = remoteAudioStream;
+        console.log('[OK] Получен удаленный аудио поток');
+    };
+    
+    // Обработка ICE кандидатов
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            console.log('[INFO] ICE кандидат:', event.candidate);
+            // Здесь должна быть отправка кандидата через сигнальный сервер
+        }
+    };
+    
+    // Создаем предложение (offer)
+    peerConnection.createOffer()
+        .then(offer => {
+            return peerConnection.setLocalDescription(offer);
+        })
+        .then(() => {
+            console.log('[OK] Offer создан');
+            // Здесь должна быть отправка offer через сигнальный сервер
+            // Для демонстрации показываем сообщение
+            document.getElementById('callStatus').textContent = 'Ожидание ответа...';
+        })
+        .catch(error => {
+            console.error('[ERROR] Ошибка создания offer:', error);
+            alert('Ошибка установления соединения');
+            endAudioCall();
+        });
+    
+    // Симуляция: через 2 секунды "подключаем" удаленный поток
+    setTimeout(() => {
+        if (isCallActive) {
+            document.getElementById('callStatus').textContent = 'Звонок установлен';
+            // В реальном приложении здесь будет установка удаленного описания
+        }
+    }, 2000);
+}
+
+function toggleMute() {
+    if (!localAudioStream) return;
+    
+    const audioTracks = localAudioStream.getAudioTracks();
+    if (audioTracks.length > 0) {
+        const isMuted = !audioTracks[0].enabled;
+        audioTracks[0].enabled = isMuted;
+        
+        const muteBtn = document.getElementById('muteBtn');
+        const muteText = document.getElementById('muteText');
+        
+        if (isMuted) {
+            muteBtn.classList.remove('btn-warning');
+            muteBtn.classList.add('btn-secondary');
+            muteText.textContent = 'Включить микрофон';
+        } else {
+            muteBtn.classList.remove('btn-secondary');
+            muteBtn.classList.add('btn-warning');
+            muteText.textContent = 'Выключить микрофон';
+        }
+    }
+}
+
+function endAudioCall() {
+    isCallActive = false;
+    
+    // Останавливаем локальный поток
+    if (localAudioStream) {
+        localAudioStream.getTracks().forEach(track => track.stop());
+        localAudioStream = null;
+    }
+    
+    // Закрываем peer connection
+    if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+    }
+    
+    // Удаляем модальное окно
+    const modal = document.getElementById('audioCallModal');
+    if (modal) {
+        modal.remove();
+    }
+    
+    console.log('[INFO] Звонок завершен');
+}
+
+// ===== ФУНКЦИИ ДЛЯ РАБОТЫ С РЕАКЦИЯМИ И ЭМОДЗИ =====
+
+const POPULAR_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '💯', '🎉', '😍', '🙏', '😎', '🤔', '👏', '✨', '🎈', '💪'];
+
+function loadMessageReactions(messageId, messageElement) {
+    fetch(`/api/messenger/message/${messageId}/reactions`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.reactions && data.reactions.length > 0) {
+                const reactionsContainer = document.createElement('div');
+                reactionsContainer.className = 'message-reactions';
+                
+                data.reactions.forEach(reaction => {
+                    const reactionBtn = document.createElement('button');
+                    reactionBtn.className = `reaction-button ${reaction.current_user_reacted ? 'active' : ''}`;
+                    reactionBtn.innerHTML = `<span>${reaction.emoji}</span><span class="reaction-count">${reaction.count}</span>`;
+                    reactionBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        addReaction(messageId, reaction.emoji);
+                    };
+                    reactionBtn.title = `Реакции: ${reaction.users.map(u => u.nickname).join(', ')}`;
+                    reactionsContainer.appendChild(reactionBtn);
+                });
+                
+                // Добавляем кнопку для добавления реакции
+                const addReactionBtn = document.createElement('button');
+                addReactionBtn.className = 'reaction-button';
+                addReactionBtn.textContent = '+';
+                addReactionBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    showReactionPicker(messageId, addReactionBtn);
+                };
+                reactionsContainer.appendChild(addReactionBtn);
+                
+                // Добавляем hover для показа действий с сообщением
+                messageElement.addEventListener('mouseenter', () => {
+                    messageElement.style.position = 'relative';
+                });
+                
+                messageElement.appendChild(reactionsContainer);
+            } else {
+                // Если нет реакций, все равно показываем кнопку для добавления
+                const reactionsContainer = document.createElement('div');
+                reactionsContainer.className = 'message-reactions';
+                
+                const addReactionBtn = document.createElement('button');
+                addReactionBtn.className = 'reaction-button';
+                addReactionBtn.textContent = '+';
+                addReactionBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    showReactionPicker(messageId, addReactionBtn);
+                };
+                reactionsContainer.appendChild(addReactionBtn);
+                messageElement.appendChild(reactionsContainer);
+            }
+        })
+        .catch(error => console.error('Ошибка загрузки реакций:', error));
+}
+
+function showReactionPicker(messageId, buttonElement) {
+    const picker = document.getElementById('emojiPickerForReactions');
+    
+    // Изменяем позицию пикера
+    const rect = buttonElement.getBoundingClientRect();
+    picker.style.position = 'fixed';
+    picker.style.top = (rect.top - 380) + 'px';
+    picker.style.left = (rect.left - 150) + 'px';
+    
+    // Заполняем эмодзи
+    const grid = document.getElementById('reactionEmojiGrid');
+    grid.innerHTML = '';
+    
+    POPULAR_EMOJIS.forEach(emoji => {
+        const item = document.createElement('button');
+        item.className = 'emoji-item';
+        item.textContent = emoji;
+        item.onclick = () => {
+            addReaction(messageId, emoji);
+            picker.classList.remove('active');
+        };
+        grid.appendChild(item);
+    });
+    
+    // Показываем пикер
+    picker.classList.add('active');
+    
+    // Закрываем при клике вне пикера
+    setTimeout(() => {
+        document.addEventListener('click', function closeOnClick(e) {
+            if (!picker.contains(e.target) && e.target !== buttonElement) {
+                picker.classList.remove('active');
+                document.removeEventListener('click', closeOnClick);
+            }
+        });
+    }, 100);
+}
+
+function closeReactionPicker() {
+    document.getElementById('emojiPickerForReactions').classList.remove('active');
+}
+
+function addReaction(messageId, emoji) {
+    fetch('/api/messenger/reaction/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            message_id: messageId,
+            emoji: emoji
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && currentUserId) {
+            // Перезагружаем сообщения для обновления реакций
+            fetch(`/api/messenger/conversation/${currentUserId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayMessages(data.messages);
+                    }
+                });
+        }
+    })
+    .catch(error => console.error('Ошибка добавления реакции:', error));
+}
+
+function toggleEmojiPicker() {
+    const picker = document.getElementById('emojiPickerForText');
+    
+    if (!picker.classList.contains('active')) {
+        // Заполняем эмодзи
+        const grid = document.getElementById('textEmojiGrid');
+        grid.innerHTML = '';
+        
+        POPULAR_EMOJIS.forEach(emoji => {
+            const item = document.createElement('button');
+            item.className = 'emoji-item';
+            item.textContent = emoji;
+            item.onclick = () => {
+                insertEmojiToInput(emoji);
+                picker.classList.remove('active');
+            };
+            grid.appendChild(item);
+        });
+        
+        // Позиционируем пикер
+        const messageInputArea = document.querySelector('.chat-input-area');
+        if (messageInputArea) {
+            const rect = messageInputArea.getBoundingClientRect();
+            picker.style.position = 'fixed';
+            picker.style.top = (rect.top - 400) + 'px';
+            picker.style.left = (rect.left + 50) + 'px';
+        }
+        
+        picker.classList.add('active');
+    } else {
+        picker.classList.remove('active');
+    }
+    
+    // Закрываем при клике вне пикера
+    setTimeout(() => {
+        document.addEventListener('click', function closeOnClick(e) {
+            if (!picker.contains(e.target)) {
+                picker.classList.remove('active');
+                document.removeEventListener('click', closeOnClick);
+            }
+        });
+    }, 100);
+}
+
+function closeEmojiPicker() {
+    document.getElementById('emojiPickerForText').classList.remove('active');
+}
+
+function insertEmojiToInput(emoji) {
+    const input = document.getElementById('messageInput');
+    const cursorPos = input.selectionStart;
+    const textBefore = input.value.substring(0, cursorPos);
+    const textAfter = input.value.substring(cursorPos);
+    
+    input.value = textBefore + emoji + textAfter;
+    
+    // Восстанавливаем позицию курсора
+    const newCursorPos = cursorPos + emoji.length;
+    input.selectionStart = newCursorPos;
+    input.selectionEnd = newCursorPos;
+    input.focus();
+}
+
+// Загружаем счетчик непрочитанных при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    updateConversationList();
+    setInterval(updateConversationList, 10000); // Обновляем каждые 10 секунд
+    
+    // Закрываем результаты поиска при клике вне области
+    document.addEventListener('click', function(e) {
+        const searchResults = document.getElementById('searchResults');
+        const userSearch = document.getElementById('userSearch');
+        if (searchResults && userSearch && !searchResults.contains(e.target) && !userSearch.contains(e.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}
+

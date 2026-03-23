@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Результат теста{% endblock %}
+
+{% block content %}
+<div class="test-result-page">
+    <h1>Тест по предмету: {{ subject }}</h1>
+    <h2>Тема: {{ topic }}</h2>
+    
+    <div class="test-content">
+        <pre>{{ test_content }}</pre>
+    </div>
+
+    <div class="actions">
+        <a href="{{ url_for('test_generator') }}" class="btn-secondary">Создать новый тест</a>
+        <a href="{{ url_for('dashboard') }}" class="btn-secondary">На главную</a>
+        <button onclick="window.print()" class="btn-primary">Распечатать</button>
+    </div>
+</div>
+{% endblock %}

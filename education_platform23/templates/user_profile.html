@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Профиль {{ profile_user.nickname or profile_user.username }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-container { max-width: 900px; margin: 0 auto; }
+    .profile-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .badge-role { padding: 0.35rem 0.75rem; border-radius: 12px; font-size: 0.85rem; }
+    .badge-teacher { background: #f5576c; color: white; }
+    .badge-student { background: #3b82f6; color: white; }
+    .info-card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+    .info-item { display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid #f0f0f0; }
+    .info-item:last-child { border-bottom: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <h1 style="margin: 0;">{{ profile_user.nickname or profile_user.username }}</h1>
+        <p style="margin: 0.5rem 0 0;">@{{ profile_user.nickname or profile_user.username }}</p>
+        <p style="margin-top: 0.75rem;">
+            <span class="badge-role {{ 'badge-teacher' if is_teacher else 'badge-student' }}">
+                {{ 'Учитель' if is_teacher else 'Ученик' }}
+            </span>
+        </p>
+        {% if can_join_teacher %}
+            {% if already_joined %}
+                <form method="POST" action="{{ url_for('unassign_teacher', user_id=profile_user.id) }}">
+                    <button class="btn btn-light btn-sm"><i class="bi bi-x-circle"></i> Отказаться от учителя</button>
+                </form>
+            {% else %}
+                <form method="POST" action="{{ url_for('assign_teacher', user_id=profile_user.id) }}">
+                    <button class="btn btn-light btn-sm"><i class="bi bi-person-plus"></i> Стать учеником</button>
+                </form>
+                {% if current_user.mentor %}
+                    <small style="display: block; margin-top: 0.5rem;">Текущий учитель: {{ current_user.mentor.nickname or current_user.mentor.username }}</small>
+                {% endif %}
+            {% endif %}
+        {% endif %}
+    </div>
+    
+    <div class="info-card">
+        <h3>Информация</h3>
+        <div class="info-item"><span>Email:</span><strong>{{ profile_user.email }}</strong></div>
+        <div class="info-item"><span>Дата регистрации:</span><strong>{{ profile_user.created_at.strftime('%d.%m.%Y') }}</strong></div>
+    </div>
+    
+    {% if is_teacher %}
+    <div class="info-card">
+        <h3>Ученики ({{ students_count }})</h3>
+        {% if teacher_students %}
+            <ul class="list-group">
+                {% for student in teacher_students[:5] %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ student.nickname or student.username }}
+                    <a href="{{ url_for('view_user', user_id=student.id) }}" class="btn btn-sm btn-outline-primary">Профиль</a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% if teacher_students|length > 5 %}
+                <small class="text-muted d-block mt-2">И ещё {{ teacher_students|length - 5 }} учеников...</small>
+            {% endif %}
+        {% else %}
+            <p style="color: #666;">Пока нет учеников</p>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="info-card">
+        <h3>Учитель</h3>
+        {% if mentor %}
+            <div class="info-item"><span>Имя:</span><strong>{{ mentor.nickname or mentor.username }}</strong></div>
+            <a href="{{ url_for('view_user', user_id=mentor.id) }}" class="btn btn-outline-primary mt-3">Профиль учителя</a>
+        {% else %}
+            <p style="color: #666;">Учитель не назначен</p>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <div class="info-card">
+        <h3>Последние достижения</h3>
+        {% if tests %}
+            {% for test in tests %}
+            <div class="info-item">
+                <span>{{ test.subject }} - {{ test.topic }}</span>
+                <strong>{{ test.score if test.score else '-' }}%</strong>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color: #999;">Нет результатов</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
